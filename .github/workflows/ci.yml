@@ -86,3 +86,80 @@ jobs:
 
       - name: Validate Benchmark Output (bench command)
         run: cargo run --release -- bench
+
+  # ===========================================================================
+  # 3. Go Control-Plane & Network Matrix Execution
+  # ===========================================================================
+  go-workflow:
+    name: Go Control-Plane Matrix (${{ matrix.os }})
+    needs: [security-audit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for Go modules
+        id: check_go
+        run: |
+          if [ -n "$(find . -name 'go.mod' -maxdepth 3)" ]; then
+            echo "go_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "go_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Go
+        if: steps.check_go.outputs.go_present == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Test and Vet Go modules
+        if: steps.check_go.outputs.go_present == 'true'
+        run: |
+          for mod in $(find . -name "go.mod" -maxdepth 3 -exec dirname {} \;); do
+            echo "Processing Go module in $mod..."
+            (cd "$mod" && go vet ./... && go test -v -race ./... && go build ./...)
+          done
+
+  # ===========================================================================
+  # 4. TypeScript DSL & CLI Quality Matrix Execution
+  # ===========================================================================
+  ts-workflow:
+    name: TypeScript DSL & CLI Matrix (${{ matrix.os }})
+    needs: [security-audit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for TypeScript / Node packages
+        id: check_ts
+        run: |
+          if [ -n "$(find . -name 'package.json' -not -path '*/node_modules/*' -maxdepth 3)" ]; then
+            echo "ts_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "ts_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_ts.outputs.ts_present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies, build and test TypeScript packages
+        if: steps.check_ts.outputs.ts_present == 'true'
+        run: |
+          for pkg in $(find . -name "package.json" -not -path '*/node_modules/*' -maxdepth 3 -exec dirname {} \;); do
+            echo "Processing Node package in $pkg..."
+            (cd "$pkg" && (npm ci || npm install) && (npm run build --if-present) && (npm test --if-present))
+          done

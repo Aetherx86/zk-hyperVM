@@ -159,14 +159,66 @@ impl ExitReason {
     pub fn from_u32(val: u32) -> Option<Self> {
         match val {
             1 => Some(Self::ExternalInterrupt),
+            2 => Some(Self::TripleFault),
+            3 => Some(Self::InitSignal),
+            4 => Some(Self::StartupIpi),
+            5 => Some(Self::IoSmi),
+            6 => Some(Self::OtherSmi),
+            7 => Some(Self::InterruptWindow),
+            8 => Some(Self::NmiWindow),
+            9 => Some(Self::TaskSwitch),
             10 => Some(Self::Cpuid),
+            11 => Some(Self::Getsec),
+            12 => Some(Self::Hlt),
+            13 => Some(Self::Invd),
+            14 => Some(Self::Invlpg),
+            15 => Some(Self::Rdpmc),
+            16 => Some(Self::Rdtsc),
+            17 => Some(Self::Rsm),
             18 => Some(Self::Vmcall),
+            19 => Some(Self::Vmclear),
+            20 => Some(Self::Vmlaunch),
+            21 => Some(Self::Vmptrld),
+            22 => Some(Self::Vmptrst),
+            23 => Some(Self::Vmread),
+            24 => Some(Self::Vmresume),
+            25 => Some(Self::Vmwrite),
+            26 => Some(Self::Vmxoff),
+            27 => Some(Self::Vmxon),
             28 => Some(Self::CrAccess),
+            29 => Some(Self::DrAccess),
             30 => Some(Self::IoInstruction),
             31 => Some(Self::Rdmsr),
             32 => Some(Self::Wrmsr),
+            33 => Some(Self::VmEntryFailureInvalidGuestState),
+            34 => Some(Self::VmEntryFailureMsrLoading),
+            36 => Some(Self::Mwait),
+            37 => Some(Self::MonitorTrapFlag),
+            39 => Some(Self::Monitor),
+            40 => Some(Self::Pause),
+            41 => Some(Self::VmEntryFailureMachineCheck),
+            43 => Some(Self::TprBelowThreshold),
+            44 => Some(Self::ApicAccess),
+            45 => Some(Self::VirtualizedEoi),
+            46 => Some(Self::GdtrIdtrAccess),
+            47 => Some(Self::LdtrTrAccess),
             48 => Some(Self::EptViolation),
+            49 => Some(Self::EptMisconfiguration),
+            50 => Some(Self::Invept),
+            51 => Some(Self::Rdtscp),
             52 => Some(Self::PreemptionTimer),
+            53 => Some(Self::Invvpid),
+            54 => Some(Self::Wbinvd),
+            55 => Some(Self::Xsetbv),
+            56 => Some(Self::ApicWrite),
+            57 => Some(Self::Rdrand),
+            58 => Some(Self::Invpcid),
+            59 => Some(Self::Vmfunc),
+            60 => Some(Self::Encls),
+            61 => Some(Self::Rdseed),
+            62 => Some(Self::PmlFull),
+            63 => Some(Self::Xsaves),
+            64 => Some(Self::Xrstors),
             _ => None,
         }
     }
@@ -175,11 +227,36 @@ impl ExitReason {
         matches!(
             self,
             Self::Cpuid
+                | Self::Getsec
+                | Self::Hlt
+                | Self::Invd
+                | Self::Invlpg
+                | Self::Rdpmc
+                | Self::Rdtsc
+                | Self::Rsm
                 | Self::Vmcall
+                | Self::Vmclear
+                | Self::Vmlaunch
+                | Self::Vmptrld
+                | Self::Vmptrst
+                | Self::Vmread
+                | Self::Vmresume
+                | Self::Vmwrite
+                | Self::Vmxoff
+                | Self::Vmxon
                 | Self::CrAccess
+                | Self::DrAccess
                 | Self::IoInstruction
                 | Self::Rdmsr
                 | Self::Wrmsr
+                | Self::Rdtscp
+                | Self::Wbinvd
+                | Self::Xsetbv
+                | Self::Rdrand
+                | Self::Invpcid
+                | Self::Rdseed
+                | Self::Xsaves
+                | Self::Xrstors
         )
     }
 }
@@ -225,6 +302,7 @@ pub fn get_invariance_mask(rho: u32, exit_qual: u64, is_mmio: bool) -> u64 {
         }
         Some(ExitReason::CrAccess) => {
             let cr_num = exit_qual & 0x0F;
+            let access_type = (exit_qual >> 4) & 3;
             let mut unmasked = VmcsCoord::RipGuest.bitmask();
             match cr_num {
                 0 => {
@@ -240,6 +318,33 @@ pub fn get_invariance_mask(rho: u32, exit_qual: u64, is_mmio: bool) -> u64 {
                     unmasked |= VmcsCoord::Cr8Guest.bitmask();
                 }
                 _ => {}
+            }
+            if access_type == 1 {
+                // MOV from CR: target general-purpose register is modified
+                let gpr_idx = ((exit_qual >> 8) & 0x0F) as usize;
+                let gpr_coord = match gpr_idx {
+                    0 => VmcsCoord::RaxGuest,
+                    1 => VmcsCoord::RcxGuest,
+                    2 => VmcsCoord::RdxGuest,
+                    3 => VmcsCoord::RbxGuest,
+                    4 => VmcsCoord::RspGuest,
+                    5 => VmcsCoord::RbpGuest,
+                    6 => VmcsCoord::RsiGuest,
+                    7 => VmcsCoord::RdiGuest,
+                    r @ 8..=15 => match r {
+                        8 => VmcsCoord::R8Guest,
+                        9 => VmcsCoord::R9Guest,
+                        10 => VmcsCoord::R10Guest,
+                        11 => VmcsCoord::R11Guest,
+                        12 => VmcsCoord::R12Guest,
+                        13 => VmcsCoord::R13Guest,
+                        14 => VmcsCoord::R14Guest,
+                        15 => VmcsCoord::R15Guest,
+                        _ => unreachable!(),
+                    },
+                    _ => VmcsCoord::RaxGuest,
+                };
+                unmasked |= gpr_coord.bitmask();
             }
             all_ones & !unmasked
         }

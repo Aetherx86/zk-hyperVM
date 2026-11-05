@@ -66,16 +66,11 @@ impl Transcript {
     }
 
     pub fn squeeze_scalars(&mut self, label: &'static str, n: usize) -> Vec<Scalar> {
-        (0..n)
-            .map(|i| {
-                let mut hasher = Keccak256::new();
-                hasher.update(self.state);
-                hasher.update(label.as_bytes());
-                hasher.update((i as u64).to_le_bytes());
-                let digest = hasher.finalize();
-                Scalar::from_le_bytes_mod_order(&digest)
-            })
-            .collect()
+        let mut out = Vec::with_capacity(n);
+        for _ in 0..n {
+            out.push(self.squeeze_scalar(label));
+        }
+        out
     }
 }
 

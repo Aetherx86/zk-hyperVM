@@ -128,9 +128,21 @@ impl SplitVirtqueue {
                 }
                 let desc = read_descriptor(curr);
 
+                if desc.len == 0 {
+                    return Err("Virtqueue descriptor length must be non-zero!");
+                }
+
+                let desc_end_gpa = match desc.gpa.checked_add(desc.len as u64) {
+                    Some(end) => end,
+                    None => return Err("Virtqueue descriptor buffer overflows 64-bit GPA space!"),
+                };
+
                 // Enforce that all pages touched by [gpa, gpa + len) are VIRTIO_SHARED_v
                 let start_page = desc.gpa >> 12;
-                let end_page = (desc.gpa + desc.len as u64 + 4095) >> 12;
+                let end_page = match (desc_end_gpa + 4095).checked_shr(12) {
+                    Some(ep) => ep,
+                    None => (desc_end_gpa >> 12) + 1,
+                };
                 for p in start_page..end_page {
                     let owner = check_owner(p);
                     if owner != MemoryOwner::VirtioShared(self.vcpu_id) {
@@ -144,7 +156,7 @@ impl SplitVirtqueue {
                     chain_head: head_idx,
                     desc_idx: curr,
                     gpa_start: desc.gpa,
-                    gpa_end: desc.gpa + desc.len as u64,
+                    gpa_end: desc_end_gpa,
                     write_perm: (desc.flags & VIRTQ_DESC_F_WRITE) != 0,
                 };
                 chain_tokens.push(token);
@@ -168,7 +180,10 @@ impl SplitVirtqueue {
     /// Phase 2: Host I/O Servicing
     /// Verifies host read or write is gated by an active capability token.
     pub fn verify_access(&self, gpa: u64, len: u64, is_write: bool) -> Result<(), &'static str> {
-        let gpa_end = gpa + len;
+        let gpa_end = match gpa.checked_add(len) {
+            Some(end) => end,
+            None => return Err("Host DMA access overflows 64-bit address space!"),
+        };
         for tokens in self.active_tokens.values() {
             for token in tokens {
                 if token.gpa_start <= gpa && gpa_end <= token.gpa_end {

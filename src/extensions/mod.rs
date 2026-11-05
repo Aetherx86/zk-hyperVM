@@ -46,18 +46,101 @@ impl Nested3DEptManager {
     }
 
     /// Full 3D Nested Radix Walk: GVA_L2 -> HPA_L0
+    /// Translates L2 guest virtual address through 4 guest radix levels
+    /// where each table pointer is in GPA_L2 space, translated to GPA_L1 (via EPT_12) and then HPA_L0 (via EPT_01).
     pub fn walk_3d_nested(
         &self,
         vpid_l2: u16,
         cr3_l2: u64,
         gva_l2: u64,
     ) -> Result<(TlbTranslation, u64), &'static str> {
-        // Translates L2 guest virtual address through 4 guest radix levels
-        // where each table pointer is in GPA_L2 space, translated to GPA_L1 and then HPA_L0.
-        let (tlb, final_hpa) =
-            self.l0_memory
-                .walk_2d_nested(vpid_l2, cr3_l2, self.eptp_01, gva_l2)?;
-        Ok((tlb, final_hpa))
+        use crate::ept::{DecomposedGva, GuestPte};
+
+        let dec = DecomposedGva::from_gva(gva_l2);
+
+        // Stage 4: Guest L2 PML4
+        let gpa_pml4_l2 = (cr3_l2 & !0xFFF) + (dec.idx_pml4 as u64) * 8;
+        let (hpa_pml4_l0, perms_pml4) = self.translate_gpa_l2_to_hpa_l0(gpa_pml4_l2)?;
+        let pml4e = GuestPte::parse(self.l0_memory.read_hpa_word(hpa_pml4_l0));
+        if !pml4e.present {
+            return Err("3D-EPT Fault: L2 PML4E not present");
+        }
+
+        // Stage 3: Guest L2 PDPT
+        let gpa_pdpt_l2 = (pml4e.gfn << 12) + (dec.idx_pdpt as u64) * 8;
+        let (hpa_pdpt_l0, perms_pdpt) = self.translate_gpa_l2_to_hpa_l0(gpa_pdpt_l2)?;
+        let pdpte = GuestPte::parse(self.l0_memory.read_hpa_word(hpa_pdpt_l0));
+        if !pdpte.present {
+            return Err("3D-EPT Fault: L2 PDPTE not present");
+        }
+        if pdpte.page_size {
+            // 1GB L2 Huge Page in GPA_L2 space
+            let gpa_data_l2 = ((pdpte.gfn & 0x000F_FFFF_C000) << 12) | (gva_l2 & 0x3FFF_FFFF);
+            let (final_hpa_l0, perms_data) = self.translate_gpa_l2_to_hpa_l0(gpa_data_l2)?;
+            let combined_perms = perms_pml4 & perms_pdpt & perms_data;
+            let tlb = TlbTranslation {
+                vpid: vpid_l2,
+                tau_vpid: self.l0_memory.tau_vpid,
+                tau_ept: self.l0_memory.tau_ept,
+                cr3_guest: cr3_l2,
+                eptp: self.eptp_01,
+                vpn_guest: dec.vpn(),
+                hfn_host: final_hpa_l0 >> 12,
+                perms: combined_perms,
+            };
+            return Ok((tlb, final_hpa_l0));
+        }
+
+        // Stage 2: Guest L2 PD
+        let gpa_pd_l2 = (pdpte.gfn << 12) + (dec.idx_pd as u64) * 8;
+        let (hpa_pd_l0, perms_pd) = self.translate_gpa_l2_to_hpa_l0(gpa_pd_l2)?;
+        let pde = GuestPte::parse(self.l0_memory.read_hpa_word(hpa_pd_l0));
+        if !pde.present {
+            return Err("3D-EPT Fault: L2 PDE not present");
+        }
+        if pde.page_size {
+            // 2MB L2 Huge Page in GPA_L2 space
+            let gpa_data_l2 = ((pde.gfn & 0x000F_FFFF_FFE0) << 12) | (gva_l2 & 0x1F_FFFF);
+            let (final_hpa_l0, perms_data) = self.translate_gpa_l2_to_hpa_l0(gpa_data_l2)?;
+            let combined_perms = perms_pml4 & perms_pdpt & perms_pd & perms_data;
+            let tlb = TlbTranslation {
+                vpid: vpid_l2,
+                tau_vpid: self.l0_memory.tau_vpid,
+                tau_ept: self.l0_memory.tau_ept,
+                cr3_guest: cr3_l2,
+                eptp: self.eptp_01,
+                vpn_guest: dec.vpn(),
+                hfn_host: final_hpa_l0 >> 12,
+                perms: combined_perms,
+            };
+            return Ok((tlb, final_hpa_l0));
+        }
+
+        // Stage 1: Guest L2 PT
+        let gpa_pt_l2 = (pde.gfn << 12) + (dec.idx_pt as u64) * 8;
+        let (hpa_pt_l0, perms_pt) = self.translate_gpa_l2_to_hpa_l0(gpa_pt_l2)?;
+        let pte = GuestPte::parse(self.l0_memory.read_hpa_word(hpa_pt_l0));
+        if !pte.present {
+            return Err("3D-EPT Fault: L2 PTE not present");
+        }
+
+        // Stage 0: L2 Target Data Frame in GPA_L2 space
+        let gpa_data_l2 = (pte.gfn << 12) | (dec.offset as u64);
+        let (final_hpa_l0, perms_data) = self.translate_gpa_l2_to_hpa_l0(gpa_data_l2)?;
+        let combined_perms = perms_pml4 & perms_pdpt & perms_pd & perms_pt & perms_data;
+
+        let tlb = TlbTranslation {
+            vpid: vpid_l2,
+            tau_vpid: self.l0_memory.tau_vpid,
+            tau_ept: self.l0_memory.tau_ept,
+            cr3_guest: cr3_l2,
+            eptp: self.eptp_01,
+            vpn_guest: dec.vpn(),
+            hfn_host: final_hpa_l0 >> 12,
+            perms: combined_perms,
+        };
+
+        Ok((tlb, final_hpa_l0))
     }
 }
 

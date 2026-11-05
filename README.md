@@ -8,6 +8,8 @@ Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental F
 
 - [1. Executive Summary](#1-executive-summary)
 - [2. Problem Formulation: User-Space zkVMs vs. Verifiable Hypervisors](#2-problem-formulation-user-space-zkvms-vs-verifiable-hypervisors)
+  - [2.1 Architectural Comparison Matrix](#21-architectural-comparison-matrix)
+  - [2.2 Visual Constraint Reduction Comparison](#22-visual-constraint-reduction-comparison)
 - [3. Core Theoretical and Cryptographic Foundations](#3-core-theoretical-and-cryptographic-foundations)
   - [3.1 Split-Witness Homomorphic Vector Commitments](#31-split-witness-homomorphic-vector-commitments)
   - [3.2 Customizable Constraint Systems (CCS) and Relaxation](#32-customizable-constraint-systems-ccs-and-relaxation)
@@ -36,8 +38,13 @@ Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental F
   - [10.1 CI Workflow Overview](#101-ci-workflow-overview)
   - [10.2 Workflow Matrix and Automated Checks](#102-workflow-matrix-and-automated-checks)
   - [10.3 Running CI Checks Locally](#103-running-ci-checks-locally)
-- [11. GitHub Repository Setup and Synchronization](#11-github-repository-setup-and-synchronization)
-- [12. Citation](#12-citation)
+- [11. Polyglot Architecture & Cross-Language Collaboration](#11-polyglot-architecture--cross-language-collaboration)
+  - [11.1 Synergistic Triad: TypeScript, Go, and Rust](#111-synergistic-triad-typescript-go-and-rust)
+  - [11.2 Zero-Copy Data Transport via Apache Arrow IPC](#112-zero-copy-data-transport-via-apache-arrow-ipc)
+  - [11.3 Complementary Integration with zkHyperVM](#113-complementary-integration-with-zkhypervm)
+- [12. GitHub Repository Setup and Synchronization](#12-github-repository-setup-and-synchronization)
+- [13. Citation](#13-citation)
+- [14. Architecture Wiki](#14-architecture-wiki)
 
 ---
 
@@ -82,6 +89,48 @@ zk-HyperKVM overcomes these limitations through four core innovations:
 2. **2D-EPT-LogUp**: A logarithmic derivative lookup bus that decouples memory lookups into fast-path Translation Lookaside Buffer (TLB) lookups and asynchronous 2D page walk refill circuits.
 3. **Protocol 1 Folding**: Non-uniform multi-instance IVC folding using split-witness homomorphic vector commitments across seven specialized CCS circuits.
 4. **Hardware Flush & Microarchitectural Leakage Contracts**: Explicit arithmetization of microarchitectural barriers (L1D_FLUSH, IBPB, VERW) and Foreshadow zero-masking to enforce speculative non-interference across security domains.
+
+### 2.1 Architectural Comparison Matrix
+
+| Architectural Feature / Dimension | zk-HyperKVM (This Work) | RISC Zero / SP1 | Jolt | Valida |
+| :--- | :--- | :--- | :--- | :--- |
+| **Target Execution Domain** | Ring -1 (Hypervisor), Ring 0 (Kernel), Ring 3 (User) | Ring 3 (User Space Only) | Ring 3 (User Space Only) | Ring 3 (User Space Only) |
+| **Virtualization Mode** | Dual-Mode Intel VT-x & AMD-V (Root / Non-Root) | None (Flat RISC-V ISA Emulation) | None (RISC-V 32-bit ISA) | None (LLVM IR / Custom ISA) |
+| **World-Switch Verification (VMCS)** | zk-VMCS Invariance Masks & Differential VMENTRY (34 constraints) | Not Supported (Requires 9,100+ R1CS constraints) | Not Supported | Not Supported |
+| **Two-Dimensional Address Translation** | 2D-EPT-LogUp (Collapses 24-step walk to O(1) fast-path TLB) | 1D Flat Merkle Memory Tree (Tens of thousands of hashes) | 1D Lasso Lookups | 1D Permutation Arguments |
+| **Asynchronous DMA & I/O Isolation** | Cryptographic IOMMU (VT-d Scalable Mode) & zk-VirtIO Tokens | Pre-image Hash Ingestion Only | In-Memory Buffers Only | In-Memory Buffers Only |
+| **Speculative Side-Channel Immunity** | Explicit Barriers (L1D, IBPB, VERW) & L1TF Non-Zero PFN Masking | Not Supported | Not Supported | Not Supported |
+| **Proof System & Arithmetization** | Non-Uniform Split-Witness IVC Folding (CCS, HyperNova-style) | Monolithic STARK over AIR / Plonkish | Lasso Multilinear Lookups over sum-check | STARK over AIR |
+| **Amortized Step Verification Cost** | 146.5 constraints (43.8x reduction) | ~6,418+ constraints / cycle | High cycle expansion for OS loops | High cycle expansion for OS loops |
+
+### 2.2 Visual Constraint Reduction Comparison
+
+The chart below compares the constraint burden per transition step between monolithic baseline R1CS approaches and zk-HyperKVM's specialized CCS circuits (matching Paper Table IV):
+
+```
+Step Type                 Baseline R1CS    zk-HyperKVM (CCS)   Reduction Ratio
+-------------------------------------------------------------------------------------------------
+Guest Load/Store (C_2)    [==================================================] 18,432
+                          [=] 114                                            161.7x Reduction
+
+2D-EPT Page Walk (C_6)    [=================================================] 18,100
+                          [==] 684                                           26.5x Reduction
+
+KVM Exit Handler (C_4)    [========================] 9,120
+                          [=] 428                                            21.3x Reduction
+
+VMEXIT World Trap (C_3)   [==================] 6,840
+                          [=] 312                                            21.9x Reduction
+
+VMENTRY Checks (C_5)      [===============] 5,600
+                          [=] 196                                            28.6x Reduction
+
+Unprivileged ALU (C_1)    [=] 420
+                          [=] 68                                             6.2x Reduction
+-------------------------------------------------------------------------------------------------
+Amortized Real OS Mix     [=================] 6,418
+(Paper Section XI)        [=] 146.5                                          43.8x Amortized Reduction
+```
 
 ---
 
@@ -775,7 +824,35 @@ cargo run --release -- bench
 
 ---
 
-## 11. GitHub Repository Setup and Synchronization
+## 11. Polyglot Architecture & Cross-Language Collaboration
+
+zk-HyperKVM and the AegisForge toolchain are architected so that TypeScript, Go, and Rust work together seamlessly across process, memory, and network boundaries without runtime contention or serialization overhead.
+
+### 11.1 Synergistic Triad: TypeScript, Go, and Rust
+
+The triad divides labor across three mathematically distinct paradigms:
+- **TypeScript (Declarative AST & Verification DSL)**: Provides client-side developer interfaces and compiles constraint specifications into high-level ASTs. Static structural typing guarantees that constraint schemas and public inputs match expected circuit shapes at compile time.
+- **Go (Distributed Orchestration & Consensus)**: Manages network multiplexing, cluster coordination (Raft metadata consensus), and topological task scheduling. Go coordinates parallel worker pools and routes task batches without executing byte-level arithmetic in its hot paths.
+- **Rust (Bare-Metal Cryptographic Compute)**: Houses the zero-knowledge core, hardware-assisted virtualization (EPT and VMCS state machines), multithreaded Rayon MSM/NTT kernels, and Z3 SMT formal verification bindings.
+
+### 11.2 Zero-Copy Data Transport via Apache Arrow IPC
+
+To avoid the performance degradation of serializing gigabyte-scale witness matrices into JSON or standard Protobuf streams, Go and Rust communicate via shared-memory Apache Arrow record batches:
+- Go allocates shared memory regions and writes columnar scalar representations.
+- Memory handles are transferred across Unix domain sockets via standard file-descriptor passing (`SCM_RIGHTS`).
+- Rust maps the physical pages directly into its address space with zero serialization latency and zero memory replication.
+
+### 11.3 Complementary Integration with zkHyperVM
+
+AegisForge directly enhances zkHyperVM:
+1. **Symbolic Pre-Verification**: AegisForge's Z3 SMT solver verifies VMCS state transition invariants and EPT translation rules before expensive cryptographic proving.
+2. **Distributed Proof Scaling**: zkHyperVM's IVC folding traces are ingested by Go's elastic scheduler and distributed across Rust prover nodes for high-throughput batch proving.
+
+For complete architectural blueprints, memory layout diagrams, and benchmark numbers, see [WIKI.md](WIKI.md).
+
+---
+
+## 12. GitHub Repository Setup and Synchronization
 
 To synchronize this local repository with your public GitHub repository:
 
@@ -802,7 +879,7 @@ git push -u origin main
 
 ---
 
-## 12. Citation
+## 13. Citation
 
 If you use or reference zk-HyperKVM in academic research, please cite the foundational paper:
 
@@ -815,6 +892,12 @@ If you use or reference zk-HyperKVM in academic research, please cite the founda
   note      = {Cryptology ePrint Archive}
 }
 ```
+
+---
+
+## 14. Architecture Wiki
+
+Detailed subsystem interactions, zero-copy IPC protocols, and formal proof pipelines are documented in [WIKI.md](WIKI.md).
 
 ---
 
