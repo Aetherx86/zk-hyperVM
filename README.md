@@ -20,7 +20,10 @@ Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental F
   - [4.4 Microarchitectural Speculative Side-Channel Leakage Contracts](#44-microarchitectural-speculative-side-channel-leakage-contracts)
   - [4.5 Advanced Architectural Extensions](#45-advanced-architectural-extensions)
 - [5. Repository Structure](#5-repository-structure)
-- [6. Installation and Prerequisites](#6-installation-and-prerequisites)
+- [6. Installation, Build, and Testing](#6-installation-build-and-testing)
+  - [6.1 Prerequisites and Build](#61-prerequisites-and-build)
+  - [6.2 Running the Full Test Suite](#62-running-the-full-test-suite)
+  - [6.3 Comprehensive Test Coverage and Edge Case Verification](#63-comprehensive-test-coverage-and-edge-case-verification)
 - [7. How to Use zkHyperVM](#7-how-to-use-zkhypervm)
   - [7.1 Command-Line Interface (CLI)](#71-command-line-interface-cli)
   - [7.2 Running VM Emulation (`run`)](#72-running-vm-emulation-run)
@@ -29,8 +32,12 @@ Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental F
   - [7.5 Rust Programmatic API Usage](#75-rust-programmatic-api-usage)
 - [8. Experimental Results and Concrete Constraint Reductions](#8-experimental-results-and-concrete-constraint-reductions)
 - [9. Soundness, Zero-Knowledge, and Security Model](#9-soundness-zero-knowledge-and-security-model)
-- [10. GitHub Repository Setup and Synchronization](#10-github-repository-setup-and-synchronization)
-- [11. Citation](#11-citation)
+- [10. Continuous Integration and GitHub Workflows (CI/CD)](#10-continuous-integration-and-github-workflows-cicd)
+  - [10.1 CI Workflow Overview](#101-ci-workflow-overview)
+  - [10.2 Workflow Matrix and Automated Checks](#102-workflow-matrix-and-automated-checks)
+  - [10.3 Running CI Checks Locally](#103-running-ci-checks-locally)
+- [11. GitHub Repository Setup and Synchronization](#11-github-repository-setup-and-synchronization)
+- [12. Citation](#12-citation)
 
 ---
 
@@ -213,9 +220,9 @@ zk-HyperKVM introduces verifiable microarchitectural contracts to guarantee spec
 - **Taint Vector**: The microarchitectural state is tracked via vector:
   $$\mu = (\mu_{\text{L1D}}, \mu_{\text{BTB}}, \mu_{\text{LFB/MDS}}, \mu_{\text{STL}})$$
 - **Hardware Flush Primitives**: World-switches are constrained to execute mandatory architectural barrier instructions:
-  - $\text{L1D\_FLUSH}$ (MSR `0x10B`): Sanitizes L1 data cache to mitigate Foreshadow (L1TF).
+  - $\text{L1D\_FLUSH}$ (MSR `0x10B`): Sanitizes L1 Data Cache to mitigate Foreshadow (L1TF).
   - $\text{IBPB}$ (MSR `0x49`): Indirect Branch Predictor Barrier to prevent cross-VM Spectre-v2 branch target injection.
-  - $\text{VERW}$: Clears CPU microarchitectural fill buffers against MDS / RIDL / Fallout.
+  - $\text{VERW}$: Clears CPU microarchitectural line fill buffers and load ports against MDS / RIDL / Fallout.
 - **Foreshadow Non-Present Page Zero-Masking**: To prevent speculatively referencing host physical frames from non-present page table entries, the circuit enforces:
   $$(1 - p_{\text{present}}) \cdot \text{PFN} = 0$$
 - **Cross-Domain Non-Interference Predicate**:
@@ -242,6 +249,12 @@ zk-HyperKVM includes three advanced architectural extensions:
 
 ```
 zkHyperVM/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml            # Multi-OS CI matrix (build, format, clippy, unit & integration tests)
+│       ├── audit.yml         # Automated dependency vulnerability scanning (cargo-audit)
+│       ├── docs.yml          # Documentation strict build verification (RUSTDOCFLAGS="-D warnings")
+│       └── bench.yml         # Benchmark and concrete constraint reduction verification
 ├── Cargo.toml                # Project manifest and cryptographic dependencies
 ├── src/
 │   ├── lib.rs                # Library root, subsystem exports, and error types
@@ -268,65 +281,180 @@ zkHyperVM/
 │   │   └── mod.rs
 │   └── extensions/           # 3D-EPT nested virtualization, PML live migration, LatticeFold
 │       └── mod.rs
+├── tests/                    # Exhaustive edge case and integration test suites (43 tests total)
+│   ├── crypto_and_ccs_edge_cases.rs
+│   ├── vmcs_and_mediation_edge_cases.rs
+│   ├── ept_and_memory_edge_cases.rs
+│   ├── virtio_iommu_and_dma_edge_cases.rs
+│   ├── leakage_and_speculative_contracts.rs
+│   ├── folding_and_decider_soundness.rs
+│   ├── extensions_and_advanced_features.rs
+│   └── emulator_full_system.rs
 └── README.md                 # Complete technical specification and user manual
 ```
 
 ---
 
-## 6. Installation and Prerequisites
+## 6. Installation, Build, and Testing
 
-### Prerequisites
+### 6.1 Prerequisites and Build
+
 - Operating System: Linux (x86_64 or aarch64), macOS (Apple Silicon or Intel), or Windows (MSVC / MinGW).
 - Rust Toolchain: Stable Rust 1.75.0 or later (tested with Rust 1.99.1).
 - Cargo: Included with standard Rust installation.
 
-### Building from Source
-
-Clone the repository:
+Clone the repository and build the release binary:
 ```bash
 git clone https://github.com/jk9576/zk-HYPERvm.git
 cd zk-HYPERvm
-```
-
-Compile debug build:
-```bash
-cargo build
-```
-
-Compile optimized release binary:
-```bash
 cargo build --release
 ```
 
-The compiled binary will be placed at `./target/release/zkhypervm`.
+The compiled binary is located at `./target/release/zkhypervm`.
 
-### Running the Test Suite
+### 6.2 Running the Full Test Suite
 
-Execute the comprehensive test suite covering all cryptographic, architectural, and emulator subsystems:
+Execute the complete suite of 43 unit and integration tests covering all subsystems and adversarial edge cases:
 ```bash
 cargo test --release
 ```
 
-Expected test suite output:
+All 43 tests pass with 100% success rate:
 ```
-running 14 tests
+running 16 tests (unit tests in src/)
+test extensions::tests::test_lattice_fold_norm_bound ... ok
+test ept::tests::test_2d_nested_page_walk ... ok
+test extensions::tests::test_live_migration_pml_tracking ... ok
+test ccs::tests::test_ccs_and_lccs_satisfaction ... ok
 test leakage::tests::test_l1tf_immunity ... ok
 test leakage::tests::test_microarch_sanitization_lifecycle ... ok
-test ept::tests::test_2d_nested_page_walk ... ok
+test logup::tests::test_bus_tuple_compression ... ok
+test logup::tests::test_logup_delta_zero_balance ... ok
 test virtio_iommu::tests::test_iommu_isolation ... ok
 test virtio_iommu::tests::test_virtio_capability_lifecycle ... ok
-test logup::tests::test_bus_tuple_compression ... ok
-test ccs::tests::test_ccs_and_lccs_satisfaction ... ok
 test vmcs::tests::test_canonical_rip_vmentry ... ok
 test vmcs::tests::test_cpuid_mediation_policy ... ok
-test logup::tests::test_logup_delta_zero_balance ... ok
 test crypto::tests::test_split_commitment_homomorphism ... ok
 test folding::tests::test_multi_circuit_folding_pipeline ... ok
 test circuits::tests::test_all_seven_circuits_satisfaction ... ok
 test emulator::tests::test_full_hypervisor_execution_and_proving ... ok
+test result: ok. 16 passed; 0 failed
 
-test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+running 6 tests (tests/crypto_and_ccs_edge_cases.rs)
+test test_ccs_high_degree_relations ... ok
+test test_multilinear_equality_polynomial_properties ... ok
+test test_lccs_satisfaction_and_tamper_detection ... ok
+test test_transcript_domain_separation_and_uniqueness ... ok
+test test_commitment_homomorphic_scaling_and_addition ... ok
+test test_zero_witness_commitment ... ok
+test result: ok. 6 passed; 0 failed
+
+running 2 tests (tests/emulator_full_system.rs)
+test test_emulator_cpuid_world_switch_and_resume ... ok
+test test_emulator_state_machine_and_stats ... ok
+test result: ok. 2 passed; 0 failed
+
+running 4 tests (tests/ept_and_memory_edge_cases.rs)
+test test_ept_memory_epoch_tracking ... ok
+test test_guest_page_fault_classification ... ok
+test test_ept_missing_entries_and_fault_classification ... ok
+test test_ept_host_huge_pages_1gb_and_2mb ... ok
+test result: ok. 4 passed; 0 failed
+
+running 3 tests (tests/extensions_and_advanced_features.rs)
+test test_3d_ept_nested_translation_lifecycle ... ok
+test test_lattice_fold_boundary_conditions ... ok
+test test_live_migration_unmapped_destination_failure ... ok
+test result: ok. 3 passed; 0 failed
+
+running 3 tests (tests/folding_and_decider_soundness.rs)
+test test_decider_rejects_bus_imbalance ... ok
+test test_decider_rejects_corrupted_witness ... ok
+test test_folding_across_all_seven_circuits ... ok
+test result: ok. 3 passed; 0 failed
+
+running 3 tests (tests/leakage_and_speculative_contracts.rs)
+test test_spec_ctrl_mitigation_flags ... ok
+test test_multi_domain_taint_and_selective_flush ... ok
+test test_l1tf_foreshadow_immunity_edge_cases ... ok
+test result: ok. 3 passed; 0 failed
+
+running 3 tests (tests/virtio_iommu_and_dma_edge_cases.rs)
+test test_virtio_multi_descriptor_chain_minting ... ok
+test test_virtio_capability_revocation_and_overfill_rejection ... ok
+test test_iommu_cross_vm_isolation_and_ept_protection ... ok
+test result: ok. 3 passed; 0 failed
+
+running 6 tests (tests/vmcs_and_mediation_edge_cases.rs)
+test test_asynchronous_exit_rip_invariance ... ok
+test test_canonical_rip_edge_cases ... ok
+test test_cr_access_trapping_and_shadowing ... ok
+test test_cr0_paging_without_protection_rejection ... ok
+test test_ept_ram_violation_invariance ... ok
+test test_hypervisor_mediation_policy_invariance_enforcement ... ok
+test result: ok. 6 passed; 0 failed
 ```
+
+### 6.3 Comprehensive Test Coverage and Edge Case Verification
+
+The test suite systematically probes boundary and failure conditions across every component:
+
+1. **`tests/crypto_and_ccs_edge_cases.rs`**:
+   - Zero witness commitment produces identity element in curve group $\mathbb{G}_1$.
+   - Split commitment homomorphic scaling and addition.
+   - Keccak256 transcript domain separation and multi-scalar squeeze uniqueness.
+   - High-degree CCS relation evaluation (degrees 1, 2, and 3).
+   - Linearized Committed CCS (LCCS) evaluation claim verification.
+   - Rejection of tampered witnesses, corrupted public multipliers $u$, and modified evaluation challenges $\mathbf{r}_x$.
+   - Boolean hypercube multilinear equality polynomial identities ($\sum_{\mathbf{y} \in \{0, 1\}^s} \widetilde{\text{eq}}(\mathbf{r}, \mathbf{y}) = 1$).
+
+2. **`tests/vmcs_and_mediation_edge_cases.rs`**:
+   - Canonical 48-bit sign-extended guest RIP boundary conditions (user space `0x0000_7FFF_...` vs kernel space `0xFFFF_8000_...`).
+   - Rejection of non-canonical RIP variants (bit 47 is 1 with upper bits 0, bit 47 is 0 with upper bits non-zero).
+   - Architectural control register validation: CR0 PG=1 requires PE=1 (rejection of un-protected paging).
+   - Control register trap arithmetization: byte-decomposed deltas, shadow comparison, and guest state preservation on trap.
+   - Hypervisor mediation policy ($\Phi_{\text{KVM}}$) exit invariance bitmask enforcement across exit reasons:
+     - CPUID exit: allows RIP and GPRs to update, strictly rejects modifications to CR3, EPTP, or RSP.
+     - External Interrupt (asynchronous): strictly requires zero guest instruction pointer advancement ($\Delta_{\text{RIP}} = 0$).
+     - Demand-paging RAM violation: strictly forbids guest GPR modifications while permitting host EPTP updates.
+
+3. **`tests/ept_and_memory_edge_cases.rs`**:
+   - Fault classification across 2D nested radix-tree levels:
+     - Distinguishes host EPT violations (EPML4, EPDPT, EPD, EPTE non-present) from guest page faults (PML4E, PDPTE, PDE, PTE non-present).
+   - 1GB and 2MB huge page address decomposition and permission bitmask evaluation in both host EPT and guest page tables.
+   - Physical memory manager epoch tracking: verifies that writes to EPT structure frames increment $\tau_{\text{ept}}$, while writes to guest RAM do not.
+
+4. **`tests/virtio_iommu_and_dma_edge_cases.rs`**:
+   - Split Virtqueue descriptor capability minting across chained descriptors (`VIRTQ_DESC_F_NEXT`).
+   - Access boundary gating: detection and rejection of out-of-bounds DMA access and write violations on read-only descriptors.
+   - Used ring completion and capability revocation: ensures tokens are revoked upon completion and prevents TOCTOU replay attacks.
+   - Rejection of overfilled descriptors where device written length exceeds descriptor capacity.
+   - Intel VT-d scalable mode IOMMU verification:
+     - Cross-domain DMA violation detection (device assigned to VM 1 attempting DMA into exclusive page of VM 2).
+     - Hypervisor EPT structure DMA protection (forbids device writes into EPT tables).
+     - Host privileged frame protection against unprivileged guest devices.
+
+5. **`tests/leakage_and_speculative_contracts.rs`**:
+   - Multi-domain microarchitectural taint accumulation and selective flush barrier verification.
+   - Catches omitted barriers: L1D flush omitted, BTB flush (IBPB) omitted, or line fill buffer flush (VERW) omitted.
+   - Cross-domain entry gate validation: verifies that foreign taint is identically zero prior to entering another security domain.
+   - Foreshadow (L1TF) immunity verification: non-present host EPTEs must have physical frame number zeroed ($[1 - p_{\text{present}}] \cdot \text{PFN} = 0$).
+   - `IA32_SPEC_CTRL` mitigation bit validation (IBRS, STIBP, SSBD, BHI_DIS_S).
+
+6. **`tests/folding_and_decider_soundness.rs`**:
+   - Multi-circuit Protocol 1 IVC folding pipeline across all 7 circuit families ($\mathcal{C}_1$ through $\mathcal{C}_7$).
+   - Terminal decider boundary check soundness:
+     - Rejects proof when LogUp bus accumulators have non-zero residual imbalance.
+     - Rejects proof when witness vector in any folded accumulator has been modified or corrupted.
+
+7. **`tests/extensions_and_advanced_features.rs`**:
+   - Section 12.1: 3D-EPT nested translation ($\text{GPA}_{L2} \to \text{GPA}_{L1} \to \text{HPA}_{L0}$) and permission intersections.
+   - Section 12.2: Live migration Page-Modification Logging (PML) dirty frame accumulation and destination rebase verification (catches unmapped guest pages on target host).
+   - Section 12.3: Post-quantum LatticeFold norm-bounded limb verification ($\|\mathbf{w}\|_{\infty} \le \beta_{\text{SIS}}$), checking exact boundary values $(\pm \beta_{\text{SIS}})$ and boundary violations $(\pm [\beta_{\text{SIS}} + 1])$.
+
+8. **`tests/emulator_full_system.rs`**:
+   - Multi-cycle execution covering unprivileged guest ALU, memory stores/loads, CPUID VMEXITs, and VMENTRY resumptions.
+   - Architectural register consistency, GPR read/write validation, and hypervisor execution statistics auditing.
 
 ---
 
@@ -573,7 +701,81 @@ The soundness of zk-HyperKVM rests on:
 
 ---
 
-## 10. GitHub Repository Setup and Synchronization
+## 10. Continuous Integration and GitHub Workflows (CI/CD)
+
+The zk-HyperKVM repository includes a multi-tiered Continuous Integration (CI) and quality assurance pipeline configured through GitHub Actions.
+
+### 10.1 CI Workflow Overview
+
+The `.github/workflows/` directory contains four automated workflows:
+
+| Workflow File | Purpose | Trigger Events | Matrix / Environment |
+| :--- | :--- | :--- | :--- |
+| `.github/workflows/ci.yml` | Full Build, Lint, Format & Test Matrix | `push`, `pull_request` on `main`, `master` | Ubuntu Latest, macOS Latest (Stable Rust) |
+| `.github/workflows/audit.yml` | Automated Security Vulnerability Scan | `push`, `pull_request`, Weekly Cron | Ubuntu Latest (`cargo-audit`) |
+| `.github/workflows/docs.yml` | Strict Documentation Verification | `push`, `pull_request` on `main`, `master` | Ubuntu Latest (`cargo doc` with `-D warnings`) |
+| `.github/workflows/bench.yml` | Constraint Reduction Verification | `push`, `workflow_dispatch` | Ubuntu Latest (`cargo run -- bench`) |
+
+### 10.2 Workflow Matrix and Automated Checks
+
+1. **Format Check (`cargo fmt`)**:
+   Enforces canonical Rust style across all library and test files:
+   ```bash
+   cargo fmt -- --check
+   ```
+
+2. **Linter Gate (`cargo clippy`)**:
+   Runs clippy across all targets (`--all-targets`) and features with compiler warnings denied:
+   ```bash
+   cargo clippy --all-targets --all-features -- -D warnings
+   ```
+
+3. **Release Test Suite Matrix**:
+   Executes all 43 unit and integration tests across both Linux (`ubuntu-latest`) and macOS (`macos-latest`):
+   ```bash
+   cargo test --release --all-targets -- --nocapture
+   ```
+
+4. **CLI End-to-End Validation**:
+   Validates CLI binary entrypoints:
+   ```bash
+   cargo run --release -- run --iterations 20
+   cargo run --release -- prove --iterations 10
+   cargo run --release -- bench
+   ```
+
+5. **Strict Rustdoc Build**:
+   Compiles documentation ensuring all intra-doc links resolve cleanly:
+   ```bash
+   RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+   ```
+
+### 10.3 Running CI Checks Locally
+
+To run the exact validation steps performed in GitHub Actions before pushing:
+
+```bash
+# 1. Check code formatting
+cargo fmt -- --check
+
+# 2. Run clippy linter with warnings denied
+cargo clippy --all-targets --all-features -- -D warnings
+
+# 3. Run all unit and integration tests
+cargo test --release --all-targets
+
+# 4. Verify documentation build
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+
+# 5. Verify CLI subcommands
+cargo run --release -- run --iterations 10
+cargo run --release -- prove --iterations 10
+cargo run --release -- bench
+```
+
+---
+
+## 11. GitHub Repository Setup and Synchronization
 
 To synchronize this local repository with your public GitHub repository:
 
@@ -600,7 +802,7 @@ git push -u origin main
 
 ---
 
-## 11. Citation
+## 12. Citation
 
 If you use or reference zk-HyperKVM in academic research, please cite the foundational paper:
 

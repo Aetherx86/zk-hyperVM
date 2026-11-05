@@ -24,12 +24,20 @@ pub struct SparseMatrix {
 
 impl SparseMatrix {
     pub fn new(rows: usize, cols: usize, entries: Vec<MatrixEntry>) -> Self {
-        Self { rows, cols, entries }
+        Self {
+            rows,
+            cols,
+            entries,
+        }
     }
 
     /// Multiply sparse matrix by a dense vector: out = M * z
     pub fn multiply_vec(&self, z: &[Scalar]) -> Vec<Scalar> {
-        assert_eq!(z.len(), self.cols, "Vector length must match matrix columns");
+        assert_eq!(
+            z.len(),
+            self.cols,
+            "Vector length must match matrix columns"
+        );
         let mut out = vec![Scalar::zero(); self.rows];
         for entry in &self.entries {
             out[entry.row] += entry.val * z[entry.col];
@@ -39,7 +47,11 @@ impl SparseMatrix {
 
     /// Multiply a row evaluation vector (from eq(r_x, .)) by sparse matrix: out = r_vec * M
     pub fn vec_multiply(&self, r_vec: &[Scalar]) -> Vec<Scalar> {
-        assert_eq!(r_vec.len(), self.rows, "Row weights length must match matrix rows");
+        assert_eq!(
+            r_vec.len(),
+            self.rows,
+            "Row weights length must match matrix rows"
+        );
         let mut out = vec![Scalar::zero(); self.cols];
         for entry in &self.entries {
             out[entry.col] += r_vec[entry.row] * entry.val;
@@ -54,14 +66,14 @@ impl SparseMatrix {
 ///   sum_{i=1}^q c_i * ( Hadamard_{j in S_i} M_j * z ) = 0^m
 #[derive(Clone, Debug)]
 pub struct CCSStructure {
-    pub m: usize,                  // number of constraints (rows)
-    pub n: usize,                  // total variables (cols)
-    pub l: usize,                  // public input length
-    pub s: usize,                  // log2(m)
-    pub s_prime: usize,            // log2(n)
+    pub m: usize,                    // number of constraints (rows)
+    pub n: usize,                    // total variables (cols)
+    pub l: usize,                    // public input length
+    pub s: usize,                    // log2(m)
+    pub s_prime: usize,              // log2(n)
     pub matrices: Vec<SparseMatrix>, // M_1, ..., M_t
-    pub multisets: Vec<Vec<usize>>, // S_1, ..., S_q (indices into matrices)
-    pub coeffs: Vec<Scalar>,       // c_1, ..., c_q
+    pub multisets: Vec<Vec<usize>>,  // S_1, ..., S_q (indices into matrices)
+    pub coeffs: Vec<Scalar>,         // c_1, ..., c_q
 }
 
 impl CCSStructure {
@@ -140,7 +152,7 @@ pub fn compute_eq_table(r: &[Scalar], num_points: usize) -> Vec<Scalar> {
         let mut next = Vec::with_capacity(table.len() * 2);
         for &val in &table {
             next.push(val * (Scalar::one() - r_i)); // y_k = 0
-            next.push(val * r_i);                   // y_k = 1
+            next.push(val * r_i); // y_k = 1
         }
         table = next;
     }
@@ -267,17 +279,29 @@ mod tests {
         let m0 = SparseMatrix::new(
             1,
             4,
-            vec![MatrixEntry { row: 0, col: 0, val: Scalar::one() }], // w0
+            vec![MatrixEntry {
+                row: 0,
+                col: 0,
+                val: Scalar::one(),
+            }], // w0
         );
         let m1 = SparseMatrix::new(
             1,
             4,
-            vec![MatrixEntry { row: 0, col: 1, val: Scalar::one() }], // w1
+            vec![MatrixEntry {
+                row: 0,
+                col: 1,
+                val: Scalar::one(),
+            }], // w1
         );
         let m2 = SparseMatrix::new(
             1,
             4,
-            vec![MatrixEntry { row: 0, col: 3, val: Scalar::one() }], // x0
+            vec![MatrixEntry {
+                row: 0,
+                col: 3,
+                val: Scalar::one(),
+            }], // x0
         );
 
         let matrices = vec![m0, m1, m2];

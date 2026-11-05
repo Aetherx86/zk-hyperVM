@@ -206,13 +206,43 @@ mod tests {
     #[test]
     fn test_split_commitment_homomorphism() {
         let params = SplitCommitmentParams::setup(4, 4, 4);
-        let w_g1 = vec![Scalar::from(1u32), Scalar::from(2u32), Scalar::from(3u32), Scalar::from(4u32)];
-        let w_h1 = vec![Scalar::from(5u32), Scalar::from(6u32), Scalar::from(7u32), Scalar::from(8u32)];
-        let w_l1 = vec![Scalar::from(9u32), Scalar::from(10u32), Scalar::from(11u32), Scalar::from(12u32)];
+        let w_g1 = vec![
+            Scalar::from(1u32),
+            Scalar::from(2u32),
+            Scalar::from(3u32),
+            Scalar::from(4u32),
+        ];
+        let w_h1 = vec![
+            Scalar::from(5u32),
+            Scalar::from(6u32),
+            Scalar::from(7u32),
+            Scalar::from(8u32),
+        ];
+        let w_l1 = vec![
+            Scalar::from(9u32),
+            Scalar::from(10u32),
+            Scalar::from(11u32),
+            Scalar::from(12u32),
+        ];
 
-        let w_g2 = vec![Scalar::from(2u32), Scalar::from(3u32), Scalar::from(4u32), Scalar::from(5u32)];
-        let w_h2 = vec![Scalar::from(6u32), Scalar::from(7u32), Scalar::from(8u32), Scalar::from(9u32)];
-        let w_l2 = vec![Scalar::from(10u32), Scalar::from(11u32), Scalar::from(12u32), Scalar::from(13u32)];
+        let w_g2 = vec![
+            Scalar::from(2u32),
+            Scalar::from(3u32),
+            Scalar::from(4u32),
+            Scalar::from(5u32),
+        ];
+        let w_h2 = vec![
+            Scalar::from(6u32),
+            Scalar::from(7u32),
+            Scalar::from(8u32),
+            Scalar::from(9u32),
+        ];
+        let w_l2 = vec![
+            Scalar::from(10u32),
+            Scalar::from(11u32),
+            Scalar::from(12u32),
+            Scalar::from(13u32),
+        ];
 
         let c1 = SplitCommitment::commit(&params, &w_g1, &w_h1, &w_l1);
         let c2 = SplitCommitment::commit(&params, &w_g2, &w_h2, &w_l2);
@@ -220,9 +250,21 @@ mod tests {
         let rho = Scalar::from(7u32);
         let c_folded = c1.fold(&c2, rho);
 
-        let w_g_folded: Vec<Scalar> = w_g1.iter().zip(w_g2.iter()).map(|(a, b)| *a + rho * *b).collect();
-        let w_h_folded: Vec<Scalar> = w_h1.iter().zip(w_h2.iter()).map(|(a, b)| *a + rho * *b).collect();
-        let w_l_folded: Vec<Scalar> = w_l1.iter().zip(w_l2.iter()).map(|(a, b)| *a + rho * *b).collect();
+        let w_g_folded: Vec<Scalar> = w_g1
+            .iter()
+            .zip(w_g2.iter())
+            .map(|(a, b)| *a + rho * *b)
+            .collect();
+        let w_h_folded: Vec<Scalar> = w_h1
+            .iter()
+            .zip(w_h2.iter())
+            .map(|(a, b)| *a + rho * *b)
+            .collect();
+        let w_l_folded: Vec<Scalar> = w_l1
+            .iter()
+            .zip(w_l2.iter())
+            .map(|(a, b)| *a + rho * *b)
+            .collect();
 
         let c_direct = SplitCommitment::commit(&params, &w_g_folded, &w_h_folded, &w_l_folded);
         assert_eq!(c_folded.c_guest, c_direct.c_guest);

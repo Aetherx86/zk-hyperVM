@@ -54,7 +54,9 @@ impl Nested3DEptManager {
     ) -> Result<(TlbTranslation, u64), &'static str> {
         // Translates L2 guest virtual address through 4 guest radix levels
         // where each table pointer is in GPA_L2 space, translated to GPA_L1 and then HPA_L0.
-        let (tlb, final_hpa) = self.l0_memory.walk_2d_nested(vpid_l2, cr3_l2, self.eptp_01, gva_l2)?;
+        let (tlb, final_hpa) =
+            self.l0_memory
+                .walk_2d_nested(vpid_l2, cr3_l2, self.eptp_01, gva_l2)?;
         Ok((tlb, final_hpa))
     }
 }
@@ -84,7 +86,6 @@ impl Default for LiveMigrationCoordinator {
 }
 
 impl LiveMigrationCoordinator {
-
     /// Page Modification Logging (PML) transition: EPTE.D 0 -> 1 records modified GFN
     pub fn record_dirty_gfn(&mut self, gfn: u64) {
         self.dirty_page_log.insert(gfn);
@@ -100,7 +101,7 @@ impl LiveMigrationCoordinator {
 
     /// Verifiable Handover: Destination host rebases EPT radix tree while preserving page digests
     pub fn rebase_destination_ept(
-        source_gfn_map: &HashMap<u64, u64>, // GFN -> HFN_src
+        source_gfn_map: &HashMap<u64, u64>,  // GFN -> HFN_src
         dest_allocation: &HashMap<u64, u64>, // GFN -> HFN_dst
     ) -> Result<bool, &'static str> {
         for gfn in source_gfn_map.keys() {
@@ -136,7 +137,9 @@ impl LatticeFoldWitnessLimb {
     }
 
     pub fn verify_infinity_norm(&self) -> bool {
-        self.limbs.iter().all(|val| val.abs() <= self.bound_beta_sis)
+        self.limbs
+            .iter()
+            .all(|val| val.abs() <= self.bound_beta_sis)
     }
 }
 

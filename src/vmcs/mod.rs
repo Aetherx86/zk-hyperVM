@@ -212,14 +212,12 @@ pub fn get_invariance_mask(rho: u32, exit_qual: u64, is_mmio: bool) -> u64 {
         }
         Some(ExitReason::Vmcall) => {
             // Mutable: RIP (0), RAX (48)
-            all_ones
-                & !(VmcsCoord::RipGuest.bitmask() | VmcsCoord::RaxGuest.bitmask())
+            all_ones & !(VmcsCoord::RipGuest.bitmask() | VmcsCoord::RaxGuest.bitmask())
         }
         Some(ExitReason::IoInstruction) => {
             let is_in = (exit_qual & (1 << 3)) != 0;
             if is_in {
-                all_ones
-                    & !(VmcsCoord::RipGuest.bitmask() | VmcsCoord::RaxGuest.bitmask())
+                all_ones & !(VmcsCoord::RipGuest.bitmask() | VmcsCoord::RaxGuest.bitmask())
             } else {
                 // OUT: only RIP advances; RAX is strictly invariant!
                 all_ones & !VmcsCoord::RipGuest.bitmask()
@@ -230,15 +228,13 @@ pub fn get_invariance_mask(rho: u32, exit_qual: u64, is_mmio: bool) -> u64 {
             let mut unmasked = VmcsCoord::RipGuest.bitmask();
             match cr_num {
                 0 => {
-                    unmasked |= VmcsCoord::Cr0Guest.bitmask()
-                        | VmcsCoord::Cr0ReadShadow.bitmask();
+                    unmasked |= VmcsCoord::Cr0Guest.bitmask() | VmcsCoord::Cr0ReadShadow.bitmask();
                 }
                 3 => {
                     unmasked |= VmcsCoord::Cr3Guest.bitmask();
                 }
                 4 => {
-                    unmasked |= VmcsCoord::Cr4Guest.bitmask()
-                        | VmcsCoord::Cr4ReadShadow.bitmask();
+                    unmasked |= VmcsCoord::Cr4Guest.bitmask() | VmcsCoord::Cr4ReadShadow.bitmask();
                 }
                 8 => {
                     unmasked |= VmcsCoord::Cr8Guest.bitmask();
@@ -306,8 +302,8 @@ pub fn get_invariance_mask(rho: u32, exit_qual: u64, is_mmio: bool) -> u64 {
 ///
 /// Evaluates whether a guest write of value `w` to CR0 or CR4 triggers a VMEXIT (exit 28).
 /// Decomposes w, mask, and shadow into 8 bytes:
-/// delta_[k] = (w_[k] ^ shadow_[k]) & mask_[k]
-/// Delta_CR = sum delta_[k] * 2^{8k}
+/// `delta_[k] = (w_[k] ^ shadow_[k]) & mask_[k]`
+/// `Delta_CR = sum delta_[k] * 2^{8k}`
 /// tau_CR = 1 if Delta_CR != 0 else 0
 pub fn evaluate_cr_access_trap(
     w: u64,
@@ -389,10 +385,9 @@ pub fn verify_vmcs_mediation_policy(
     // 1. Verify Hadamard product invariance constraint
     for j in 0..VMCS_VECTOR_LEN {
         let is_invariant = ((mask_int >> j) & 1) == 1;
-        if is_invariant
-            && omega_prev.elements[j] != omega_next.elements[j] {
-                return Err("Violation of hypervisor mediation invariance mask!");
-            }
+        if is_invariant && omega_prev.elements[j] != omega_next.elements[j] {
+            return Err("Violation of hypervisor mediation invariance mask!");
+        }
     }
 
     // 2. Verify Instruction Pointer advancement
@@ -478,27 +473,14 @@ mod tests {
         next.set_u64(VmcsCoord::RbxGuest, 0x00100800);
 
         // Valid mediation
-        let res = verify_vmcs_mediation_policy(
-            &prev,
-            &next,
-            ExitReason::Cpuid as u32,
-            0,
-            2,
-            false,
-        );
+        let res = verify_vmcs_mediation_policy(&prev, &next, ExitReason::Cpuid as u32, 0, 2, false);
         assert!(res.is_ok());
 
         // Malicious hypervisor tampering with RSP (forbidden on CPUID!)
         let mut tampered = next.clone();
         tampered.set_u64(VmcsCoord::RspGuest, 0x7fff_1000);
-        let tampered_res = verify_vmcs_mediation_policy(
-            &prev,
-            &tampered,
-            ExitReason::Cpuid as u32,
-            0,
-            2,
-            false,
-        );
+        let tampered_res =
+            verify_vmcs_mediation_policy(&prev, &tampered, ExitReason::Cpuid as u32, 0, 2, false);
         assert!(tampered_res.is_err());
     }
 

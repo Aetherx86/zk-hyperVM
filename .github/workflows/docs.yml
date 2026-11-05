@@ -1,0 +1,31 @@
+name: Documentation Verification
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+env:
+  RUSTDOCFLAGS: "-D warnings"
+
+jobs:
+  doc:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust dependency cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile rustdoc documentation
+        run: cargo doc --no-deps --all-features

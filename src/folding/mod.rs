@@ -80,8 +80,10 @@ impl FoldingEngine {
         self.state.bus_acc.update(bus_deltas);
 
         // Absorb public state into transcript
-        self.transcript.absorb_scalar("active_circuit", &k_star.to_scalar());
-        self.transcript.absorb_point("comm_total", &cccs_inst.c.total());
+        self.transcript
+            .absorb_scalar("active_circuit", &k_star.to_scalar());
+        self.transcript
+            .absorb_point("comm_total", &cccs_inst.c.total());
         for x_val in &cccs_inst.x {
             self.transcript.absorb_scalar("public_io", x_val);
         }
@@ -174,7 +176,9 @@ impl FoldingEngine {
     pub fn verify_terminal_proof(&self) -> Result<(), &'static str> {
         // 1. Check bus cancellation
         if !self.state.bus_acc.is_balanced() {
-            return Err("Decider Verification Failed: LogUp bus accumulators do not balance to zero!");
+            return Err(
+                "Decider Verification Failed: LogUp bus accumulators do not balance to zero!",
+            );
         }
 
         // 2. Check each active LCCS accumulator satisfaction
@@ -185,7 +189,9 @@ impl FoldingEngine {
                 let lccs = &self.state.lccs_accumulators[id_idx];
 
                 if !lccs.is_satisfied(ccs, wit) {
-                    return Err("Decider Verification Failed: Folded LCCS accumulator unsatisfied!");
+                    return Err(
+                        "Decider Verification Failed: Folded LCCS accumulator unsatisfied!",
+                    );
                 }
             }
         }
@@ -219,7 +225,12 @@ mod tests {
                 CircuitId::GuestAlu,
                 &inst1,
                 &wit1,
-                (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                (
+                    Scalar::zero(),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                ),
             )
             .unwrap();
 
@@ -230,7 +241,12 @@ mod tests {
                 CircuitId::GuestAlu,
                 &inst2,
                 &wit2,
-                (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                (
+                    Scalar::zero(),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                ),
             )
             .unwrap();
 
@@ -243,7 +259,12 @@ mod tests {
                 CircuitId::VmExit,
                 &inst3,
                 &wit3,
-                (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                (
+                    Scalar::zero(),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                ),
             )
             .unwrap();
 

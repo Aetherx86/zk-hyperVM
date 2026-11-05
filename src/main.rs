@@ -58,15 +58,64 @@ fn setup_demo_environment() -> (HyperKvmInstance, Vec<GuestInstruction>) {
         suppress_ve: false,
     };
     vm.memory.write_hpa_word(0x1000, epte_base.encode());
-    vm.memory.write_hpa_word(0x2000, HostEpte { hfn: 3, ..epte_base }.encode());
-    vm.memory.write_hpa_word(0x3000, HostEpte { hfn: 4, ..epte_base }.encode());
+    vm.memory.write_hpa_word(
+        0x2000,
+        HostEpte {
+            hfn: 3,
+            ..epte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        0x3000,
+        HostEpte {
+            hfn: 4,
+            ..epte_base
+        }
+        .encode(),
+    );
 
     // Host EPTE mappings
-    vm.memory.write_hpa_word(0x4000 + 2 * 8, HostEpte { hfn: 10, ..epte_base }.encode());
-    vm.memory.write_hpa_word(0x4000 + 5 * 8, HostEpte { hfn: 20, ..epte_base }.encode());
-    vm.memory.write_hpa_word(0x4000 + 6 * 8, HostEpte { hfn: 30, ..epte_base }.encode());
-    vm.memory.write_hpa_word(0x4000 + 7 * 8, HostEpte { hfn: 40, ..epte_base }.encode());
-    vm.memory.write_hpa_word(0x4000 + 8 * 8, HostEpte { hfn: 50, ..epte_base }.encode());
+    vm.memory.write_hpa_word(
+        0x4000 + 2 * 8,
+        HostEpte {
+            hfn: 10,
+            ..epte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        0x4000 + 5 * 8,
+        HostEpte {
+            hfn: 20,
+            ..epte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        0x4000 + 6 * 8,
+        HostEpte {
+            hfn: 30,
+            ..epte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        0x4000 + 7 * 8,
+        HostEpte {
+            hfn: 40,
+            ..epte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        0x4000 + 8 * 8,
+        HostEpte {
+            hfn: 50,
+            ..epte_base
+        }
+        .encode(),
+    );
 
     // Guest page tables
     let guest_pte_base = GuestPte {
@@ -84,9 +133,30 @@ fn setup_demo_environment() -> (HyperKvmInstance, Vec<GuestInstruction>) {
         no_execute: false,
     };
     vm.memory.write_hpa_word(10 << 12, guest_pte_base.encode());
-    vm.memory.write_hpa_word(20 << 12, GuestPte { gfn: 6, ..guest_pte_base }.encode());
-    vm.memory.write_hpa_word(30 << 12, GuestPte { gfn: 7, ..guest_pte_base }.encode());
-    vm.memory.write_hpa_word(40 << 12, GuestPte { gfn: 8, ..guest_pte_base }.encode());
+    vm.memory.write_hpa_word(
+        20 << 12,
+        GuestPte {
+            gfn: 6,
+            ..guest_pte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        30 << 12,
+        GuestPte {
+            gfn: 7,
+            ..guest_pte_base
+        }
+        .encode(),
+    );
+    vm.memory.write_hpa_word(
+        40 << 12,
+        GuestPte {
+            gfn: 8,
+            ..guest_pte_base
+        }
+        .encode(),
+    );
 
     // Set GVA in R7 (RDI)
     vm.write_gpr(7, 0x0048);
@@ -94,13 +164,29 @@ fn setup_demo_environment() -> (HyperKvmInstance, Vec<GuestInstruction>) {
     let program = vec![
         GuestInstruction::MovImm { dst: 1, imm: 100 },
         GuestInstruction::MovImm { dst: 2, imm: 250 },
-        GuestInstruction::Add { dst: 3, src1: 1, src2: 2 },
-        GuestInstruction::StoreMem { src: 3, base: 7, offset: 0 },
+        GuestInstruction::Add {
+            dst: 3,
+            src1: 1,
+            src2: 2,
+        },
+        GuestInstruction::StoreMem {
+            src: 3,
+            base: 7,
+            offset: 0,
+        },
         GuestInstruction::Cpuid,
-        GuestInstruction::LoadMem { dst: 4, base: 7, offset: 0 },
+        GuestInstruction::LoadMem {
+            dst: 4,
+            base: 7,
+            offset: 0,
+        },
         GuestInstruction::VirtioKick { queue_id: 0 },
         GuestInstruction::Vmcall,
-        GuestInstruction::Sub { dst: 5, src1: 4, src2: 1 },
+        GuestInstruction::Sub {
+            dst: 5,
+            src1: 4,
+            src2: 1,
+        },
     ];
 
     (vm, program)
@@ -132,7 +218,10 @@ fn main() {
             println!("\n[+] Execution completed successfully!");
             println!("    Total Steps Executed:   {}", count);
             println!("    Elapsed Time:           {:?}", elapsed);
-            println!("    Throughput:             {:.2} steps/sec", (count as f64) / elapsed.as_secs_f64());
+            println!(
+                "    Throughput:             {:.2} steps/sec",
+                (count as f64) / elapsed.as_secs_f64()
+            );
             println!("\nDetailed Architectural Breakdown:");
             println!("    - ALU/Branch Steps:     {}", vm.stats.alu_steps);
             println!("    - Memory Load/Store:    {}", vm.stats.mem_steps);
@@ -162,7 +251,10 @@ fn main() {
             }
             let folding_time = start.elapsed();
 
-            println!("\n[+] Incremental IVC Folding complete across {} steps in {:?}", steps, folding_time);
+            println!(
+                "\n[+] Incremental IVC Folding complete across {} steps in {:?}",
+                steps, folding_time
+            );
             println!("    Homomorphic Group Folds: {} steps", steps);
             println!("    LogUp Bus Accumulators: Checked and balanced.");
 
@@ -187,25 +279,80 @@ fn main() {
             println!("=========================================================================================");
             println!("     zk-HyperKVM Benchmark: Concrete Constraint Reductions (Matching Paper Table IV)    ");
             println!("=========================================================================================");
-            println!("{:<18} {:<32} {:<15} {:<18} {:<10}", "Circuit ID", "Subsystem Description", "Baseline R1CS", "zk-HyperKVM (CCS)", "Reduction");
+            println!(
+                "{:<18} {:<32} {:<15} {:<18} {:<10}",
+                "Circuit ID",
+                "Subsystem Description",
+                "Baseline R1CS",
+                "zk-HyperKVM (CCS)",
+                "Reduction"
+            );
             println!("-----------------------------------------------------------------------------------------");
 
             let rows = [
-                ("C_1: GUEST_ALU", "Unprivileged ALU / Branch", 420, 68, "6.2x"),
-                ("C_2: GUEST_MEM", "Load/Store via Fast-Path B_TLB", 18432, 114, "161.7x"),
-                ("C_3: VMEXIT", "Non-Root -> Root Trap & VMCS", 6840, 312, "21.9x"),
-                ("C_4: HYPER_MED", "KVM Exit Dispatcher & Policy", 9120, 428, "21.3x"),
-                ("C_5: VMENTRY", "VMRESUME Checks & Sanitization", 5600, 196, "28.6x"),
-                ("C_6: WALK_2D", "Asynchronous 2D-EPT Page Walk", 18100, 684, "26.5x"),
-                ("C_7: DMA_VIRTIO", "virtio Capability & zk-IOMMU", 12480, 540, "23.1x"),
+                (
+                    "C_1: GUEST_ALU",
+                    "Unprivileged ALU / Branch",
+                    420,
+                    68,
+                    "6.2x",
+                ),
+                (
+                    "C_2: GUEST_MEM",
+                    "Load/Store via Fast-Path B_TLB",
+                    18432,
+                    114,
+                    "161.7x",
+                ),
+                (
+                    "C_3: VMEXIT",
+                    "Non-Root -> Root Trap & VMCS",
+                    6840,
+                    312,
+                    "21.9x",
+                ),
+                (
+                    "C_4: HYPER_MED",
+                    "KVM Exit Dispatcher & Policy",
+                    9120,
+                    428,
+                    "21.3x",
+                ),
+                (
+                    "C_5: VMENTRY",
+                    "VMRESUME Checks & Sanitization",
+                    5600,
+                    196,
+                    "28.6x",
+                ),
+                (
+                    "C_6: WALK_2D",
+                    "Asynchronous 2D-EPT Page Walk",
+                    18100,
+                    684,
+                    "26.5x",
+                ),
+                (
+                    "C_7: DMA_VIRTIO",
+                    "virtio Capability & zk-IOMMU",
+                    12480,
+                    540,
+                    "23.1x",
+                ),
             ];
 
             for (cid, desc, r1cs, ccs, red) in rows {
-                println!("{:<18} {:<32} {:<15} {:<18} {:<10}", cid, desc, r1cs, ccs, red);
+                println!(
+                    "{:<18} {:<32} {:<15} {:<18} {:<10}",
+                    cid, desc, r1cs, ccs, red
+                );
             }
 
             println!("-----------------------------------------------------------------------------------------");
-            println!("{:<18} {:<32} {:<15} {:<18} {:<10}", "Amortized Cost", "Realistic OS Mix (Paper §XI)", 6418, 146.5, "43.8x");
+            println!(
+                "{:<18} {:<32} {:<15} {:<18} {:<10}",
+                "Amortized Cost", "Realistic OS Mix (Paper §XI)", 6418, 146.5, "43.8x"
+            );
             println!("=========================================================================================");
             println!("Amortized reduction is 43.8x over monolithic inline 2D-EPT radix walk verification!");
         }

@@ -221,7 +221,12 @@ impl HyperKvmInstance {
             CircuitId::Walk2D,
             &inst6,
             &wit6,
-            (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+            (
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+            ),
         )?;
 
         Ok(final_hpa)
@@ -249,13 +254,24 @@ impl HyperKvmInstance {
 
                 // Fold C_1: GUEST_ALU
                 let _ccs1 = folding_engine.family.get_ccs(CircuitId::GuestAlu);
-                let x1 = vec![Scalar::from(rip), Scalar::from(rip + 4), Scalar::zero(), Scalar::zero()];
-                let (inst1, wit1) = synthesize_circuit_step(&folding_engine.family, CircuitId::GuestAlu, &x1);
+                let x1 = vec![
+                    Scalar::from(rip),
+                    Scalar::from(rip + 4),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                ];
+                let (inst1, wit1) =
+                    synthesize_circuit_step(&folding_engine.family, CircuitId::GuestAlu, &x1);
                 folding_engine.fold_step(
                     CircuitId::GuestAlu,
                     &inst1,
                     &wit1,
-                    (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                    (
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                    ),
                 )?;
             }
             GuestInstruction::Sub { dst, src1, src2 } => {
@@ -269,13 +285,24 @@ impl HyperKvmInstance {
                 self.stats.alu_steps += 1;
 
                 let _ccs1 = folding_engine.family.get_ccs(CircuitId::GuestAlu);
-                let x1 = vec![Scalar::from(rip), Scalar::from(rip + 4), Scalar::zero(), Scalar::zero()];
-                let (inst1, wit1) = synthesize_circuit_step(&folding_engine.family, CircuitId::GuestAlu, &x1);
+                let x1 = vec![
+                    Scalar::from(rip),
+                    Scalar::from(rip + 4),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                ];
+                let (inst1, wit1) =
+                    synthesize_circuit_step(&folding_engine.family, CircuitId::GuestAlu, &x1);
                 folding_engine.fold_step(
                     CircuitId::GuestAlu,
                     &inst1,
                     &wit1,
-                    (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                    (
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                    ),
                 )?;
             }
             GuestInstruction::MovImm { dst, imm } => {
@@ -286,13 +313,24 @@ impl HyperKvmInstance {
                 self.stats.alu_steps += 1;
 
                 let _ccs1 = folding_engine.family.get_ccs(CircuitId::GuestAlu);
-                let x1 = vec![Scalar::from(rip), Scalar::from(rip + 5), Scalar::zero(), Scalar::zero()];
-                let (inst1, wit1) = synthesize_circuit_step(&folding_engine.family, CircuitId::GuestAlu, &x1);
+                let x1 = vec![
+                    Scalar::from(rip),
+                    Scalar::from(rip + 5),
+                    Scalar::zero(),
+                    Scalar::zero(),
+                ];
+                let (inst1, wit1) =
+                    synthesize_circuit_step(&folding_engine.family, CircuitId::GuestAlu, &x1);
                 folding_engine.fold_step(
                     CircuitId::GuestAlu,
                     &inst1,
                     &wit1,
-                    (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                    (
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                    ),
                 )?;
             }
             GuestInstruction::LoadMem { dst, base, offset } => {
@@ -316,12 +354,18 @@ impl HyperKvmInstance {
                     Scalar::from(val),
                     Scalar::zero(),
                 ];
-                let (inst2, wit2) = synthesize_circuit_step(&folding_engine.family, CircuitId::GuestMem, &x2);
+                let (inst2, wit2) =
+                    synthesize_circuit_step(&folding_engine.family, CircuitId::GuestMem, &x2);
                 folding_engine.fold_step(
                     CircuitId::GuestMem,
                     &inst2,
                     &wit2,
-                    (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                    (
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                    ),
                 )?;
             }
             GuestInstruction::StoreMem { src, base, offset } => {
@@ -345,12 +389,18 @@ impl HyperKvmInstance {
                     Scalar::from(val),
                     Scalar::one(), // is_store
                 ];
-                let (inst2, wit2) = synthesize_circuit_step(&folding_engine.family, CircuitId::GuestMem, &x2);
+                let (inst2, wit2) =
+                    synthesize_circuit_step(&folding_engine.family, CircuitId::GuestMem, &x2);
                 folding_engine.fold_step(
                     CircuitId::GuestMem,
                     &inst2,
                     &wit2,
-                    (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                    (
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                    ),
                 )?;
             }
             GuestInstruction::Cpuid => {
@@ -387,12 +437,18 @@ impl HyperKvmInstance {
                     Scalar::zero(),
                     Scalar::zero(),
                 ];
-                let (inst7, wit7) = synthesize_circuit_step(&folding_engine.family, CircuitId::DmaVirtio, &x7);
+                let (inst7, wit7) =
+                    synthesize_circuit_step(&folding_engine.family, CircuitId::DmaVirtio, &x7);
                 folding_engine.fold_step(
                     CircuitId::DmaVirtio,
                     &inst7,
                     &wit7,
-                    (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+                    (
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                        Scalar::zero(),
+                    ),
                 )?;
 
                 let rip = self.vmcs.get_u64(VmcsCoord::RipGuest);
@@ -421,7 +477,8 @@ impl HyperKvmInstance {
         self.mode = VirtualizationMode::Root;
         self.vmcs.set_u64(VmcsCoord::ExitReason, exit as u64);
         self.vmcs.set_u64(VmcsCoord::ExitQualification, exit_qual);
-        self.vmcs.set_u64(VmcsCoord::ExitInstrLength, exit_len as u64);
+        self.vmcs
+            .set_u64(VmcsCoord::ExitInstrLength, exit_len as u64);
 
         let _ccs3 = folding_engine.family.get_ccs(CircuitId::VmExit);
         let x3 = vec![
@@ -437,7 +494,12 @@ impl HyperKvmInstance {
             CircuitId::VmExit,
             &inst3,
             &wit3,
-            (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+            (
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+            ),
         )?;
 
         // 2. HYPER_MED: Circuit C_4 (KVM Exit Dispatcher & Mediation Policy)
@@ -468,7 +530,14 @@ impl HyperKvmInstance {
         }
 
         // Verify mediation policy Phi_KVM mathematically
-        verify_vmcs_mediation_policy(&prev_vmcs, &post_vmcs, exit as u32, exit_qual, exit_len, false)?;
+        verify_vmcs_mediation_policy(
+            &prev_vmcs,
+            &post_vmcs,
+            exit as u32,
+            exit_qual,
+            exit_len,
+            false,
+        )?;
 
         let _ccs4 = folding_engine.family.get_ccs(CircuitId::HyperMed);
         let x4 = vec![
@@ -481,12 +550,18 @@ impl HyperKvmInstance {
             Scalar::zero(),
             Scalar::zero(),
         ];
-        let (inst4, wit4) = synthesize_circuit_step(&folding_engine.family, CircuitId::HyperMed, &x4);
+        let (inst4, wit4) =
+            synthesize_circuit_step(&folding_engine.family, CircuitId::HyperMed, &x4);
         folding_engine.fold_step(
             CircuitId::HyperMed,
             &inst4,
             &wit4,
-            (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+            (
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+            ),
         )?;
 
         // 3. VMENTRY: Circuit C_5 (Differential consistency checks & microarch sanitization)
@@ -506,12 +581,18 @@ impl HyperKvmInstance {
             Scalar::zero(),
             Scalar::zero(),
         ];
-        let (inst5, wit5) = synthesize_circuit_step(&folding_engine.family, CircuitId::VmEntry, &x5);
+        let (inst5, wit5) =
+            synthesize_circuit_step(&folding_engine.family, CircuitId::VmEntry, &x5);
         folding_engine.fold_step(
             CircuitId::VmEntry,
             &inst5,
             &wit5,
-            (Scalar::zero(), Scalar::zero(), Scalar::zero(), Scalar::zero()),
+            (
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+            ),
         )?;
 
         // Update VMCS state and restore Non-Root mode
@@ -552,15 +633,64 @@ mod tests {
             suppress_ve: false,
         };
         vm.memory.write_hpa_word(0x1000, epte_base.encode());
-        vm.memory.write_hpa_word(0x2000, HostEpte { hfn: 3, ..epte_base }.encode());
-        vm.memory.write_hpa_word(0x3000, HostEpte { hfn: 4, ..epte_base }.encode());
+        vm.memory.write_hpa_word(
+            0x2000,
+            HostEpte {
+                hfn: 3,
+                ..epte_base
+            }
+            .encode(),
+        );
+        vm.memory.write_hpa_word(
+            0x3000,
+            HostEpte {
+                hfn: 4,
+                ..epte_base
+            }
+            .encode(),
+        );
 
         // Host EPTE mappings for guest tables
-        vm.memory.write_hpa_word(0x4000 + 2 * 8, HostEpte { hfn: 10, ..epte_base }.encode()); // GFN 2 (PML4) -> HFN 10
-        vm.memory.write_hpa_word(0x4000 + 5 * 8, HostEpte { hfn: 20, ..epte_base }.encode()); // GFN 5 (PDPT) -> HFN 20
-        vm.memory.write_hpa_word(0x4000 + 6 * 8, HostEpte { hfn: 30, ..epte_base }.encode()); // GFN 6 (PD) -> HFN 30
-        vm.memory.write_hpa_word(0x4000 + 7 * 8, HostEpte { hfn: 40, ..epte_base }.encode()); // GFN 7 (PT) -> HFN 40
-        vm.memory.write_hpa_word(0x4000 + 8 * 8, HostEpte { hfn: 50, ..epte_base }.encode()); // GFN 8 (Data) -> HFN 50
+        vm.memory.write_hpa_word(
+            0x4000 + 2 * 8,
+            HostEpte {
+                hfn: 10,
+                ..epte_base
+            }
+            .encode(),
+        ); // GFN 2 (PML4) -> HFN 10
+        vm.memory.write_hpa_word(
+            0x4000 + 5 * 8,
+            HostEpte {
+                hfn: 20,
+                ..epte_base
+            }
+            .encode(),
+        ); // GFN 5 (PDPT) -> HFN 20
+        vm.memory.write_hpa_word(
+            0x4000 + 6 * 8,
+            HostEpte {
+                hfn: 30,
+                ..epte_base
+            }
+            .encode(),
+        ); // GFN 6 (PD) -> HFN 30
+        vm.memory.write_hpa_word(
+            0x4000 + 7 * 8,
+            HostEpte {
+                hfn: 40,
+                ..epte_base
+            }
+            .encode(),
+        ); // GFN 7 (PT) -> HFN 40
+        vm.memory.write_hpa_word(
+            0x4000 + 8 * 8,
+            HostEpte {
+                hfn: 50,
+                ..epte_base
+            }
+            .encode(),
+        ); // GFN 8 (Data) -> HFN 50
 
         // Guest page tables for GVA
         let guest_pte_base = GuestPte {
@@ -578,9 +708,30 @@ mod tests {
             no_execute: false,
         };
         vm.memory.write_hpa_word(10 << 12, guest_pte_base.encode());
-        vm.memory.write_hpa_word(20 << 12, GuestPte { gfn: 6, ..guest_pte_base }.encode());
-        vm.memory.write_hpa_word(30 << 12, GuestPte { gfn: 7, ..guest_pte_base }.encode());
-        vm.memory.write_hpa_word(40 << 12, GuestPte { gfn: 8, ..guest_pte_base }.encode());
+        vm.memory.write_hpa_word(
+            20 << 12,
+            GuestPte {
+                gfn: 6,
+                ..guest_pte_base
+            }
+            .encode(),
+        );
+        vm.memory.write_hpa_word(
+            30 << 12,
+            GuestPte {
+                gfn: 7,
+                ..guest_pte_base
+            }
+            .encode(),
+        );
+        vm.memory.write_hpa_word(
+            40 << 12,
+            GuestPte {
+                gfn: 8,
+                ..guest_pte_base
+            }
+            .encode(),
+        );
 
         // Guest program:
         // 1. MovImm R8 = 100
@@ -594,10 +745,22 @@ mod tests {
         let program = vec![
             GuestInstruction::MovImm { dst: 8, imm: 100 },
             GuestInstruction::MovImm { dst: 9, imm: 250 },
-            GuestInstruction::Add { dst: 10, src1: 8, src2: 9 },
-            GuestInstruction::StoreMem { src: 10, base: 7, offset: 0 },
+            GuestInstruction::Add {
+                dst: 10,
+                src1: 8,
+                src2: 9,
+            },
+            GuestInstruction::StoreMem {
+                src: 10,
+                base: 7,
+                offset: 0,
+            },
             GuestInstruction::Cpuid,
-            GuestInstruction::LoadMem { dst: 11, base: 7, offset: 0 },
+            GuestInstruction::LoadMem {
+                dst: 11,
+                base: 7,
+                offset: 0,
+            },
             GuestInstruction::VirtioKick { queue_id: 0 },
             GuestInstruction::Hlt,
         ];
@@ -622,6 +785,9 @@ mod tests {
         // Verify that the terminal multi-instance folding proof checks out!
         assert!(folding_engine.verify_terminal_proof().is_ok());
 
-        println!("Execution and Proving completed successfully! Stats: {:?}", vm.stats);
+        println!(
+            "Execution and Proving completed successfully! Stats: {:?}",
+            vm.stats
+        );
     }
 }

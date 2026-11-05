@@ -27,7 +27,12 @@ impl VirtqDesc {
         let len = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
         let flags = u16::from_le_bytes(bytes[12..14].try_into().unwrap());
         let next = u16::from_le_bytes(bytes[14..16].try_into().unwrap());
-        Self { gpa, len, flags, next }
+        Self {
+            gpa,
+            len,
+            flags,
+            next,
+        }
     }
 
     pub fn to_bytes(&self) -> [u8; 16] {
@@ -68,7 +73,14 @@ pub struct SplitVirtqueue {
 }
 
 impl SplitVirtqueue {
-    pub fn new(vcpu_id: u32, queue_id: u16, q_size: usize, desc_gpa: u64, avail_gpa: u64, used_gpa: u64) -> Self {
+    pub fn new(
+        vcpu_id: u32,
+        queue_id: u16,
+        q_size: usize,
+        desc_gpa: u64,
+        avail_gpa: u64,
+        used_gpa: u64,
+    ) -> Self {
         Self {
             vcpu_id,
             queue_id,
@@ -179,7 +191,7 @@ impl SplitVirtqueue {
     ) -> Result<Vec<DmaCapabilityToken>, &'static str> {
         let tokens = self
             .active_tokens
-            .remove(&head_idx)
+            .get(&head_idx)
             .ok_or("Cannot complete: Descriptor head not active in virtqueue!")?;
 
         let max_writable_len: u32 = tokens
@@ -192,6 +204,7 @@ impl SplitVirtqueue {
             return Err("Written length exceeds descriptor writable capacity!");
         }
 
+        let tokens = self.active_tokens.remove(&head_idx).unwrap();
         self.last_used_idx = self.last_used_idx.wrapping_add(1);
         Ok(tokens)
     }
@@ -282,7 +295,9 @@ impl VerifiableIommu {
                     .unwrap_or(false);
 
                 if !assigned {
-                    return Err("IOMMU Violation: Device attempted DMA to unassigned guest exclusive page!");
+                    return Err(
+                        "IOMMU Violation: Device attempted DMA to unassigned guest exclusive page!",
+                    );
                 }
             }
             MemoryOwner::EptTree(_) => {
@@ -323,7 +338,7 @@ mod tests {
             next: 0,
         };
 
-        let descriptors = vec![desc0, desc1];
+        let descriptors = [desc0, desc1];
 
         // Mint capabilities for head index 0
         let tokens = vq

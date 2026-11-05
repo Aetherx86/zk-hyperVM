@@ -1,0 +1,25 @@
+name: Benchmark & Constraint Verification
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Verify Constraint Reductions (Paper Table IV)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust dependency cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run concrete constraint reduction benchmarks
+        run: cargo run --release -- bench

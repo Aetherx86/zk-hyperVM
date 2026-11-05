@@ -36,7 +36,7 @@ impl BusTuple {
     }
 
     /// Compresses a tuple into a single field element:
-    /// Comp_beta(fields) = bus_id + sum_{r=0}^{k-1} fields[r] * beta^{r+1}
+    /// `Comp_beta(fields) = bus_id + sum_{r=0}^{k-1} fields[r] * beta^{r+1}`
     pub fn compress(&self, beta: Scalar) -> Scalar {
         let mut sum = self.bus_id.to_scalar();
         let mut beta_pow = beta;
@@ -250,7 +250,7 @@ mod tests {
         let comp2 = tuple.compress(beta);
         assert_eq!(comp1, comp2);
 
-        let mut altered = tlb.clone();
+        let mut altered = tlb;
         altered.vpn_guest += 1;
         assert_ne!(tuple.compress(beta), altered.to_bus_tuple().compress(beta));
     }

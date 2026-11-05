@@ -49,12 +49,17 @@ impl MicroarchTaint {
         }
         if f_verw {
             self.lfb_mds = 0;
+            self.stl = 0;
         }
     }
 
     /// Verify Definition 5: World-Switch Microarchitectural Sanitization Invariant
     /// When switching from domain d1 to d2 (where d2 != d1), domain d1 must have zero residual taint!
-    pub fn verify_sanitization(&self, from_domain: u32, to_domain: u32) -> Result<(), &'static str> {
+    pub fn verify_sanitization(
+        &self,
+        from_domain: u32,
+        to_domain: u32,
+    ) -> Result<(), &'static str> {
         if from_domain == to_domain {
             return Ok(());
         }
@@ -64,10 +69,14 @@ impl MicroarchTaint {
             return Err("Microarchitectural Leakage: L1D cache contains residual taint from previous domain!");
         }
         if (self.btb & from_mask) != 0 {
-            return Err("Microarchitectural Leakage: BTB contains residual branch prediction taint!");
+            return Err(
+                "Microarchitectural Leakage: BTB contains residual branch prediction taint!",
+            );
         }
         if (self.lfb_mds & from_mask) != 0 {
-            return Err("Microarchitectural Leakage: Line fill buffers contain residual MDS taint!");
+            return Err(
+                "Microarchitectural Leakage: Line fill buffers contain residual MDS taint!",
+            );
         }
 
         Ok(())
@@ -80,17 +89,29 @@ impl MicroarchTaint {
         for d in 0..num_domains {
             if d != d_next {
                 let mask = 1u32 << d;
-                if (self.l1d & mask) != 0 { foreign_sum += 1; }
-                if (self.btb & mask) != 0 { foreign_sum += 1; }
-                if (self.lfb_mds & mask) != 0 { foreign_sum += 1; }
-                if (self.stl & mask) != 0 { foreign_sum += 1; }
+                if (self.l1d & mask) != 0 {
+                    foreign_sum += 1;
+                }
+                if (self.btb & mask) != 0 {
+                    foreign_sum += 1;
+                }
+                if (self.lfb_mds & mask) != 0 {
+                    foreign_sum += 1;
+                }
+                if (self.stl & mask) != 0 {
+                    foreign_sum += 1;
+                }
             }
         }
         foreign_sum
     }
 
     /// Check if ForeignTaint == 0 prior to entering domain d_next
-    pub fn verify_cross_domain_entry_gate(&self, d_next: u32, num_domains: u32) -> Result<(), &'static str> {
+    pub fn verify_cross_domain_entry_gate(
+        &self,
+        d_next: u32,
+        num_domains: u32,
+    ) -> Result<(), &'static str> {
         if self.foreign_taint(d_next, num_domains) != 0 {
             return Err("Cross-Domain Entry Gate Rejected: Non-zero foreign microarchitectural taint detected!");
         }
@@ -128,7 +149,9 @@ pub const SPEC_CTRL_REQUIRED_MASK: u64 = 0b0100_0000_0111; // IBRS | STIBP | SSB
 
 pub fn verify_spec_ctrl(val: u64) -> Result<(), &'static str> {
     if (val & SPEC_CTRL_REQUIRED_MASK) != SPEC_CTRL_REQUIRED_MASK {
-        return Err("Speculative Isolation Violation: Required SPEC_CTRL mitigation bits were stripped!");
+        return Err(
+            "Speculative Isolation Violation: Required SPEC_CTRL mitigation bits were stripped!",
+        );
     }
     Ok(())
 }
@@ -175,7 +198,10 @@ mod tests {
         assert!(verify_l1tf_immunity(&vuln_epte).is_err());
 
         // Safe entry: Non-present, but HFN = 0
-        let safe_epte = HostEpte { hfn: 0, ..vuln_epte };
+        let safe_epte = HostEpte {
+            hfn: 0,
+            ..vuln_epte
+        };
         assert!(verify_l1tf_immunity(&safe_epte).is_ok());
     }
 }

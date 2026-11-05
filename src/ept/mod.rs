@@ -54,17 +54,37 @@ impl GuestPte {
 
     pub fn encode(&self) -> u64 {
         let mut raw = 0u64;
-        if self.present { raw |= 1; }
-        if self.read_write { raw |= 1 << 1; }
-        if self.user_supervisor { raw |= 1 << 2; }
-        if self.page_write_through { raw |= 1 << 3; }
-        if self.page_cache_disable { raw |= 1 << 4; }
-        if self.accessed { raw |= 1 << 5; }
-        if self.dirty { raw |= 1 << 6; }
-        if self.page_size { raw |= 1 << 7; }
-        if self.global { raw |= 1 << 8; }
+        if self.present {
+            raw |= 1;
+        }
+        if self.read_write {
+            raw |= 1 << 1;
+        }
+        if self.user_supervisor {
+            raw |= 1 << 2;
+        }
+        if self.page_write_through {
+            raw |= 1 << 3;
+        }
+        if self.page_cache_disable {
+            raw |= 1 << 4;
+        }
+        if self.accessed {
+            raw |= 1 << 5;
+        }
+        if self.dirty {
+            raw |= 1 << 6;
+        }
+        if self.page_size {
+            raw |= 1 << 7;
+        }
+        if self.global {
+            raw |= 1 << 8;
+        }
         raw |= (self.gfn & 0x000F_FFFF_FFFF) << 12;
-        if self.no_execute { raw |= 1 << 63; }
+        if self.no_execute {
+            raw |= 1 << 63;
+        }
         raw
     }
 }
@@ -106,17 +126,35 @@ impl HostEpte {
 
     pub fn encode(&self) -> u64 {
         let mut raw = 0u64;
-        if self.read { raw |= 1; }
-        if self.write { raw |= 1 << 1; }
-        if self.execute { raw |= 1 << 2; }
+        if self.read {
+            raw |= 1;
+        }
+        if self.write {
+            raw |= 1 << 1;
+        }
+        if self.execute {
+            raw |= 1 << 2;
+        }
         raw |= ((self.mem_type & 7) as u64) << 3;
-        if self.ignore_pat { raw |= 1 << 6; }
-        if self.page_size { raw |= 1 << 7; }
-        if self.accessed { raw |= 1 << 8; }
-        if self.dirty { raw |= 1 << 9; }
-        if self.execute_user { raw |= 1 << 10; }
+        if self.ignore_pat {
+            raw |= 1 << 6;
+        }
+        if self.page_size {
+            raw |= 1 << 7;
+        }
+        if self.accessed {
+            raw |= 1 << 8;
+        }
+        if self.dirty {
+            raw |= 1 << 9;
+        }
+        if self.execute_user {
+            raw |= 1 << 10;
+        }
         raw |= (self.hfn & 0x000F_FFFF_FFFF) << 12;
-        if self.suppress_ve { raw |= 1 << 63; }
+        if self.suppress_ve {
+            raw |= 1 << 63;
+        }
         raw
     }
 
@@ -205,7 +243,11 @@ impl NestedMemoryManager {
     pub fn write_hpa_word(&mut self, hpa: u64, val: u64) {
         assert_eq!(hpa % 8, 0, "Unaligned HPA write");
         let hfn = hpa >> 12;
-        let owner = self.ownership.get(&hfn).copied().unwrap_or(MemoryOwner::HostPrivileged);
+        let owner = self
+            .ownership
+            .get(&hfn)
+            .copied()
+            .unwrap_or(MemoryOwner::HostPrivileged);
         if let MemoryOwner::EptTree(_) = owner {
             self.tau_ept += 1;
         }
@@ -272,7 +314,8 @@ impl NestedMemoryManager {
             return Err("EPT Violation at EPTE (Non-Present)");
         }
 
-        let perms = epml4e.perms_byte() & epdpte.perms_byte() & epde.perms_byte() & epte.perms_byte();
+        let perms =
+            epml4e.perms_byte() & epdpte.perms_byte() & epde.perms_byte() & epte.perms_byte();
         Ok(EptTranslation {
             tau_ept: self.tau_ept,
             eptp,
@@ -311,13 +354,13 @@ impl NestedMemoryManager {
         }
         if pdpte.page_size {
             // 1GB Huge Page in Guest
-            let guest_target_gfn = (pdpte.gfn & 0x000F_FFFF_C000)
-                | ((dec.idx_pd as u64) << 9)
-                | (dec.idx_pt as u64);
+            let guest_target_gfn =
+                (pdpte.gfn & 0x000F_FFFF_C000) | ((dec.idx_pd as u64) << 9) | (dec.idx_pt as u64);
             let ept_data = self.walk_ept_1d(eptp, guest_target_gfn)?;
             let final_hpa = (ept_data.hfn << 12) + (dec.offset as u64);
 
-            let perms = Self::compute_combined_perms(&[pml4e, pdpte], &[ept_pml4, ept_pdpt, ept_data]);
+            let perms =
+                Self::compute_combined_perms(&[pml4e, pdpte], &[ept_pml4, ept_pdpt, ept_data]);
             let tlb = TlbTranslation {
                 vpid,
                 tau_vpid: self.tau_vpid,
@@ -344,7 +387,10 @@ impl NestedMemoryManager {
             let ept_data = self.walk_ept_1d(eptp, guest_target_gfn)?;
             let final_hpa = (ept_data.hfn << 12) + (dec.offset as u64);
 
-            let perms = Self::compute_combined_perms(&[pml4e, pdpte, pde], &[ept_pml4, ept_pdpt, ept_pd, ept_data]);
+            let perms = Self::compute_combined_perms(
+                &[pml4e, pdpte, pde],
+                &[ept_pml4, ept_pdpt, ept_pd, ept_data],
+            );
             let tlb = TlbTranslation {
                 vpid,
                 tau_vpid: self.tau_vpid,

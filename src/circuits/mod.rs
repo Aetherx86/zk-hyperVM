@@ -236,13 +236,37 @@ fn build_canonical_matrices(m: usize, n: usize, l: usize) -> Vec<SparseMatrix> {
 
     for r in 0..m {
         if r < l {
-            e0.push(MatrixEntry { row: r, col: r, val: Scalar::one() });
-            e1.push(MatrixEntry { row: r, col: u_col, val: Scalar::one() });
-            e2.push(MatrixEntry { row: r, col: u_col + 1 + r, val: Scalar::one() });
+            e0.push(MatrixEntry {
+                row: r,
+                col: r,
+                val: Scalar::one(),
+            });
+            e1.push(MatrixEntry {
+                row: r,
+                col: u_col,
+                val: Scalar::one(),
+            });
+            e2.push(MatrixEntry {
+                row: r,
+                col: u_col + 1 + r,
+                val: Scalar::one(),
+            });
         } else {
-            e0.push(MatrixEntry { row: r, col: r, val: Scalar::one() });
-            e1.push(MatrixEntry { row: r, col: u_col, val: Scalar::one() });
-            e2.push(MatrixEntry { row: r, col: r, val: Scalar::one() });
+            e0.push(MatrixEntry {
+                row: r,
+                col: r,
+                val: Scalar::one(),
+            });
+            e1.push(MatrixEntry {
+                row: r,
+                col: u_col,
+                val: Scalar::one(),
+            });
+            e2.push(MatrixEntry {
+                row: r,
+                col: r,
+                val: Scalar::one(),
+            });
         }
     }
 
@@ -293,7 +317,11 @@ pub fn synthesize_circuit_step(
         x: public_inputs.to_vec(),
     };
 
-    assert!(ccs.is_satisfied(&wit.full_w(), &inst.x), "Circuit {:?} satisfaction failed!", id);
+    assert!(
+        ccs.is_satisfied(&wit.full_w(), &inst.x),
+        "Circuit {:?} satisfaction failed!",
+        id
+    );
     (inst, wit)
 }
 
