@@ -305,8 +305,8 @@ zkHyperVM/
 
 Clone the repository and build the release binary:
 ```bash
-git clone https://github.com/jk9576/zk-HYPERvm.git
-cd zk-HYPERvm
+git clone https://github.com/Aetherx86/zk-hyperVM.git
+cd zk-hyperVM
 cargo build --release
 ```
 
