@@ -15,7 +15,7 @@ ark-bn254 = { version = "0.6" }
 ark-poly = { version = "0.6", features = ["std"] }
 ark-std = { version = "0.6" }
 ark-serialize = { version = "0.6", features = ["derive"] }
-sha3 = "0.10"
+sha3 = "0.12"
 rayon = "1.10"
 thiserror = "2.0"
 clap = { version = "4.5", features = ["derive"] }
