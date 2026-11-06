@@ -13,16 +13,21 @@ on:
     - cron: "0 0 * * 1" # Weekly every Monday at 00:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   rust-audit:
     name: Rust Security Advisory Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+          with:
+            toolchain: stable
 
       - name: Install and Run cargo-audit
         run: |
@@ -34,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Check for Go modules
         id: check_go
@@ -47,7 +52,7 @@ jobs:
 
       - name: Set up Go
         if: steps.check_go.outputs.go_present == 'true'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.22'
 
@@ -65,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Check for TypeScript / Node packages
         id: check_ts
@@ -78,7 +83,7 @@ jobs:
 
       - name: Set up Node.js
         if: steps.check_ts.outputs.ts_present == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
