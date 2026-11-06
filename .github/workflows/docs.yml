@@ -29,3 +29,6 @@ jobs:
 
       - name: Compile rustdoc documentation
         run: cargo doc --no-deps --all-features
+
+      - name: Check that README math survives GitHub's Markdown pass
+        run: python3 scripts/check_readme_math.py README.md

@@ -163,7 +163,9 @@ where $\mathbf{z} = (\mathbf{w} \parallel 1 \parallel \mathbf{x}) \in \mathbb{F}
 
 To enable non-interactive folding without computing expensive cross-terms over high-degree relations, zk-HyperKVM linearizes the constraint system into a Linearized Committed CCS (LCCS) instance:
 
-$$\sum_{i=0}^{q-1} c_i \cdot \left( \sum_{\mathbf{y} \in \{0,1\}^s} \widetilde{\text{eq}}(\mathbf{r}_x, \mathbf{y}) \cdot \prod_{j \in S_i} \widetilde{M_j \mathbf{z}}(\mathbf{y}) \right) + \mathbf{e} = \mathbf{0}$$
+```math
+\sum_{i=0}^{q-1} c_i \cdot \left( \sum_{\mathbf{y} \in \{0,1\}^s} \widetilde{\text{eq}}(\mathbf{r}_x, \mathbf{y}) \cdot \prod_{j \in S_i} \widetilde{M_j \mathbf{z}}(\mathbf{y}) \right) + \mathbf{e} = \mathbf{0}
+```
 
 where $\widetilde{\text{eq}}(\mathbf{r}_x, \mathbf{y}) = \prod_{k=0}^{s-1} (r_k y_k + (1 - r_k)(1 - y_k))$ is the multilinear equality polynomial, $\mathbf{r}_x \in \mathbb{F}_p^s$ is a random evaluation challenge, and $\mathbf{e} \in \mathbb{F}_p^m$ is the accumulated slack vector.
 
@@ -219,7 +221,7 @@ The zk-VMCS subsystem arithmetizes the state transition between guest non-root e
 $$\widehat{\mathbf{\Omega}}_v = (\text{RIP}, \text{RSP}, \text{CR0}, \text{CR3}, \text{CR4}, \text{RFLAGS}, \dots, \text{EPTP}, \text{VPID}, \tau_{\text{vpid}}, \tau_{\text{ept}}) \in \mathbb{F}_p^{63}$$
 
 #### Exit-Invariance Masking
-Under the Linux KVM hypervisor model, a VMEXIT preserves the vast majority of architectural guest control state. For exit reason $\rho \in \{ \text{CPUID}, \text{CR\_ACCESS}, \text{EPT\_VIOLATION}, \text{VMCALL}, \dots \}$, zk-HyperKVM enforces the KVM mediation policy $\Phi_{\text{KVM}}$ via exit-invariance bitmask $\mathbf{I}(\rho) \in \{0, 1\}^{63}$:
+Under the Linux KVM hypervisor model, a VMEXIT preserves the vast majority of architectural guest control state. For exit reason $`\rho \in \{ \text{CPUID}, \text{CR\_ACCESS}, \text{EPT\_VIOLATION}, \text{VMCALL}, \dots \}`$, zk-HyperKVM enforces the KVM mediation policy $\Phi_{\text{KVM}}$ via exit-invariance bitmask $`\mathbf{I}(\rho) \in \{0, 1\}^{63}`$:
 
 $$\mathbf{I}(\rho) \circ (\widehat{\mathbf{\Omega}}_v^{(t+1)} - \widehat{\mathbf{\Omega}}_v^{(t)}) = \mathbf{0}^{63}$$
 
@@ -250,7 +252,7 @@ Address translation in hardware virtualization involves two nested page walks:
 zk-HyperKVM decouples translation verification:
 1. **Fast-Path TLB Bus ($\mathcal{B}_{\text{TLB}}$)**: Cached translations are looked up in $\mathcal{O}(1)$ constraints using the VPID and EPT epoch tags:
    $$(\text{GVA}, \text{HPA}, \text{Perm}, \text{VPID}, \tau_{\text{vpid}}, \tau_{\text{ept}}) \in \mathcal{B}_{\text{TLB}}$$
-2. **Asynchronous 2D Refill Circuit ($\mathcal{C}_{6:\text{WALK\_2D}}$)**: On a TLB miss, an asynchronous refill circuit proves the full 24-step nested radix-tree walk, writing the translated mapping into the lookup table with multiplicity $m_j$.
+2. **Asynchronous 2D Refill Circuit ($`\mathcal{C}_{6:\text{WALK\_2D}}`$)**: On a TLB miss, an asynchronous refill circuit proves the full 24-step nested radix-tree walk, writing the translated mapping into the lookup table with multiplicity $m_j$.
 3. **Permission Lattice**: Access permissions ($R, W, X, U$) are combined via a degree-3 lattice check:
    $$\text{Perm}_{\text{effective}} = \text{Perm}_{\text{Guest}} \land \text{Perm}_{\text{Host}}$$
 4. **Huge Page Multiplexer**: 2MB and 1GB huge page translations are verified directly at the PD or PDPT level without walking down to 4KB leaf PTEs.
@@ -270,7 +272,7 @@ zk-HyperKVM introduces verifiable microarchitectural contracts to guarantee spec
 - **Taint Vector**: The microarchitectural state is tracked via vector:
   $$\mu = (\mu_{\text{L1D}}, \mu_{\text{BTB}}, \mu_{\text{LFB/MDS}}, \mu_{\text{STL}})$$
 - **Hardware Flush Primitives**: World-switches are constrained to execute mandatory architectural barrier instructions:
-  - $\text{L1D\_FLUSH}$ (MSR `0x10B`): Sanitizes L1 Data Cache to mitigate Foreshadow (L1TF).
+  - $`\text{L1D\_FLUSH}`$ (MSR `0x10B`): Sanitizes L1 Data Cache to mitigate Foreshadow (L1TF).
   - $\text{IBPB}$ (MSR `0x49`): Indirect Branch Predictor Barrier to prevent cross-VM Spectre-v2 branch target injection.
   - $\text{VERW}$: Clears CPU microarchitectural line fill buffers and load ports against MDS / RIDL / Fallout.
 - **Foreshadow Non-Present Page Zero-Masking**: To prevent speculatively referencing host physical frames from non-present page table entries, the circuit enforces:
@@ -291,7 +293,7 @@ zk-HyperKVM includes three advanced architectural extensions:
    - Physical host frame rebasing under EPT isomorphism $\mathcal{M}_{\text{EPT}}$.
 3. **Post-Quantum LatticeFold**:
    - Module-SIS Ajtai vector commitments over cyclotomic polynomial rings $\mathcal{R}_q = \mathbb{Z}_q[X]/(X^d + 1)$.
-   - Norm-bounded witness limb verification ($\|\mathbf{w}_U\|_{\infty} \le \beta_{\text{SIS}}$) for quantum-resistant verifiable virtualization.
+   - Norm-bounded witness limb verification ($`\|\mathbf{w}_U\|_{\infty} \le \beta_{\text{SIS}}`$) for quantum-resistant verifiable virtualization.
 
 ---
 
@@ -456,7 +458,7 @@ The test suite systematically probes boundary and failure conditions across ever
    - High-degree CCS relation evaluation (degrees 1, 2, and 3).
    - Linearized Committed CCS (LCCS) evaluation claim verification.
    - Rejection of tampered witnesses, corrupted public multipliers $u$, and modified evaluation challenges $\mathbf{r}_x$.
-   - Boolean hypercube multilinear equality polynomial identities ($\sum_{\mathbf{y} \in \{0, 1\}^s} \widetilde{\text{eq}}(\mathbf{r}, \mathbf{y}) = 1$).
+   - Boolean hypercube multilinear equality polynomial identities ($`\sum_{\mathbf{y} \in \{0, 1\}^s} \widetilde{\text{eq}}(\mathbf{r}, \mathbf{y}) = 1`$).
 
 2. **`tests/vmcs_and_mediation_edge_cases.rs`**:
    - Canonical 48-bit sign-extended guest RIP boundary conditions (user space `0x0000_7FFF_...` vs kernel space `0xFFFF_8000_...`).
@@ -500,7 +502,7 @@ The test suite systematically probes boundary and failure conditions across ever
 7. **`tests/extensions_and_advanced_features.rs`**:
    - Section 12.1: 3D-EPT nested translation ($\text{GPA}_{L2} \to \text{GPA}_{L1} \to \text{HPA}_{L0}$) and permission intersections.
    - Section 12.2: Live migration Page-Modification Logging (PML) dirty frame accumulation and destination rebase verification (catches unmapped guest pages on target host).
-   - Section 12.3: Post-quantum LatticeFold norm-bounded limb verification ($\|\mathbf{w}\|_{\infty} \le \beta_{\text{SIS}}$), checking exact boundary values $(\pm \beta_{\text{SIS}})$ and boundary violations $(\pm [\beta_{\text{SIS}} + 1])$.
+   - Section 12.3: Post-quantum LatticeFold norm-bounded limb verification ($`\|\mathbf{w}\|_{\infty} \le \beta_{\text{SIS}}`$), checking exact boundary values $(\pm \beta_{\text{SIS}})$ and boundary violations $(\pm [\beta_{\text{SIS}} + 1])$.
 
 8. **`tests/emulator_full_system.rs`**:
    - Multi-cycle execution covering unprivileged guest ALU, memory stores/loads, CPUID VMEXITs, and VMENTRY resumptions.
