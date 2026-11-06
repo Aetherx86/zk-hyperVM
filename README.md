@@ -45,6 +45,7 @@ Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental F
 - [12. GitHub Repository Setup and Synchronization](#12-github-repository-setup-and-synchronization)
 - [13. Citation](#13-citation)
 - [14. Architecture Wiki](#14-architecture-wiki)
+- [15. Browser Workbench and Client-Side Proving](#15-browser-workbench-and-client-side-proving)
 
 ---
 
@@ -904,3 +905,72 @@ Detailed subsystem interactions, zero-copy IPC protocols, and formal proof pipel
 ## License
 
 This project is licensed under the Apache License, Version 2.0 or the MIT License, at your option.
+
+---
+
+## 15. Browser Workbench and Client-Side Proving
+
+Proofs and binary analysis can run entirely on the user's device. The `web/` folder holds a static page, and
+the whole system compiles to one WebAssembly module of under 1 MB, so private inputs and sensitive binaries
+never need to reach a server. A Content Security Policy makes that a guarantee the browser enforces: a test
+in real Chrome confirms that the page cannot make a network request, even when it tries to.
+
+```sh
+./web/build.sh
+cd web && python3 -m http.server 8000
+# then open http://localhost:8000
+```
+
+### What the workbench does
+
+| Tab | What it does |
+|---|---|
+| Inspect a binary | Reads ELF, PE and Mach-O files and EVM bytecode, then shows sections, symbols and a control-flow graph. EVM code is also lifted to expressions. |
+| Prove execution | Runs a guest program under the hypervisor, folds every step into the IVC accumulators, and runs the decider. The demo proves 45 steps in about 0.4 s in Chrome on an Apple Silicon laptop. |
+| Check a Circom witness | Checks a `.wtns` file against a `.r1cs` circuit, directly and through the conversion to CCS. |
+
+### Crates
+
+| Crate | Purpose |
+|---|---|
+| `crates/witness` | Runs guest programs and folds their execution. Parses Circom `.r1cs` and `.wtns` files, and converts R1CS to the CCS form used here. |
+| `crates/inspector` | The format parsers, decoders for x86, x86-64, AArch64 and RISC-V, an EVM disassembler and lifter, and the graph builder. |
+| `crates/wasm` | A C-style ABI over linear memory, so building needs only `cargo` and no JavaScript toolchain. |
+
+Guest programs use a small text syntax:
+
+```text
+movimm r1, 100
+movimm r2, 250
+add r3, r1, r2
+store r3, [r7+0]
+cpuid
+load r4, [r7+0]
+```
+
+### Safety of untrusted input
+
+Everything a user can open is treated as hostile.
+
+- Parsers bound every count and offset before using it, and return errors rather than panicking. Tests feed them
+  random bytes and damaged real executables.
+- Circom field elements must be canonical. A value above the modulus is refused instead of reduced, so a forged
+  witness cannot pass as a different number.
+- Strings from a file reach the page only as text. A test opens an ELF whose section name is an HTML injection
+  attempt, and confirms that nothing executes.
+- Work is bounded by an instruction limit in the inspector and a step limit in the prover, and the prover runs in a
+  worker, so the page stays responsive.
+
+### Testing against the real tools
+
+The Circom fixtures in `crates/witness/tests/fixtures` come from the real compiler and from snarkjs, so format
+compatibility is tested against real output and not only against this project's reading of the specification. CI runs
+the compiled module under Node and drives the actual page in headless Chrome.
+
+### Current limitations
+
+- Proof generation currently runs on one thread in the browser.
+- AArch64 decoding covers all control flow and the most common instructions, and prints the rest as raw words.
+  RISC-V decodes the base integer and multiply instructions, and compressed instructions by length and control flow.
+- The graph shows up to 150 blocks of a function, and analysis stops at 50,000 instructions, which the page reports.
+- Only BN254 Circom circuits are accepted, since that is the curve zk-HyperKVM folds over.

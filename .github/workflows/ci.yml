@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -56,7 +56,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -76,7 +76,7 @@ jobs:
         run: cargo build --release --all-targets
 
       - name: Run Unit and Integration Tests (cargo test)
-        run: cargo test --release --all-targets --all-features -- --nocapture
+        run: cargo test --release --workspace --all-targets --all-features -- --nocapture
 
       - name: Validate CLI Execution (run command)
         run: cargo run --release -- run --iterations 20
@@ -100,7 +100,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check for Go modules
         id: check_go
@@ -139,7 +139,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check for TypeScript / Node packages
         id: check_ts
@@ -163,3 +163,31 @@ jobs:
             echo "Processing Node package in $pkg..."
             (cd "$pkg" && (npm ci || npm install) && (npm run build --if-present) && (npm test --if-present))
           done
+
+  # ===========================================================================
+  # Browser Workbench: the real module under Node, and the real page in Chrome
+  # ===========================================================================
+  workbench:
+    name: Browser Workbench
+    needs: [security-audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build the WebAssembly module
+        run: ./web/build.sh
+
+      - name: Test the module under Node
+        run: node web/test.mjs
+
+      - name: Test the page in headless Chrome
+        run: node web/browser-test.mjs

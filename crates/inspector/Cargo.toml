@@ -1,0 +1,11 @@
+[package]
+name = "zkhypervm-inspector"
+version = "0.2.0"
+edition = "2021"
+authors = ["Jeong Hoon Kim"]
+description = "Client-side inspector for ELF, PE, Mach-O and EVM code, with control-flow graphs"
+license = "MIT"
+
+[dependencies]
+iced-x86 = { version = "1", default-features = false, features = ["std", "decoder", "nasm", "instr_info"] }
+serde = { version = "1", features = ["derive"] }

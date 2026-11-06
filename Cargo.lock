@@ -564,6 +564,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "iced-x86"
+version = "1.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c23ad4d19dca41180e835ef6fbd2c1ee655777eca086ad80dd517e0513322879"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -680,6 +689,12 @@ checksum = "cb26cec98cce3a3d96cbb7bced3c4b16e3d13f27ec56dbd62cbc8f39cfb9d653"
 dependencies = [
  "cpufeatures",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "libc"
@@ -902,6 +917,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
 dependencies = [
  "serde_core",
+ "serde_derive",
 ]
 
 [[package]]
@@ -1227,7 +1243,7 @@ checksum = "e13084392c5e4bc371903e2935a5eaeed24905a7511356b883835e18a78f6879"
 
 [[package]]
 name = "zkhypervm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -1239,6 +1255,33 @@ dependencies = [
  "rayon",
  "sha3",
  "thiserror",
+]
+
+[[package]]
+name = "zkhypervm-inspector"
+version = "0.2.0"
+dependencies = [
+ "iced-x86",
+ "serde",
+]
+
+[[package]]
+name = "zkhypervm-wasm"
+version = "0.2.0"
+dependencies = [
+ "serde_json",
+ "zkhypervm-inspector",
+ "zkhypervm-witness",
+]
+
+[[package]]
+name = "zkhypervm-witness"
+version = "0.2.0"
+dependencies = [
+ "ark-ff",
+ "serde",
+ "serde_json",
+ "zkhypervm",
 ]
 
 [[package]]

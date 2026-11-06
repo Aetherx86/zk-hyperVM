@@ -1,6 +1,9 @@
+[workspace]
+members = [".", "crates/*"]
+
 [package]
 name = "zkhypervm"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Jeong Hoon Kim", "zkHyperVM Contributors"]
 description = "zk-HyperKVM: Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental Folding over Extended Page Tables and VMCS Transitions"
@@ -20,6 +23,9 @@ clap = { version = "4.5", features = ["derive"] }
 [[bin]]
 name = "zkhypervm"
 path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
 
 [lib]
 name = "zkhypervm"

@@ -20,6 +20,7 @@
 pub mod ccs;
 pub mod circuits;
 pub mod crypto;
+pub mod demo;
 pub mod emulator;
 pub mod ept;
 pub mod extensions;
