@@ -1,0 +1,194 @@
+name: CI Safety & Quality Pipeline
+
+on:
+  push:
+    tags:
+      - "v*.0.0"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  # ===========================================================================
+  # 1. Security & Safety: Secret Scanning and Repository Hygiene
+  # ===========================================================================
+  security-audit:
+    name: Security & Secret Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Repository Hygiene & Conflict Marker Verification
+        run: |
+          echo "Scanning for unresolved git conflict markers..."
+          ! git grep -I -nE '^<{7} |^={7}$|^>{7} ' || (echo "Error: Unresolved conflict markers found" && exit 1)
+          echo "Repository hygiene check completed successfully."
+
+  # ===========================================================================
+  # 2. Rust Quality, Tests & Matrix Execution
+  # ===========================================================================
+  rust-workflow:
+    name: Rust Quality & Test Matrix (${{ matrix.os }})
+    needs: [security-audit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      - name: Rust Formatting Check (cargo fmt)
+        run: cargo fmt --all -- --check
+
+      - name: Rust Linter Check (cargo clippy)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Build Release Binaries
+        run: cargo build --release --all-targets
+
+      - name: Run Unit and Integration Tests (cargo test)
+        run: cargo test --release --workspace --all-targets --all-features -- --nocapture
+
+      - name: Validate CLI Execution (run command)
+        run: cargo run --release -- run --iterations 20
+
+      - name: Validate CLI Prover and Decider (prove command)
+        run: cargo run --release -- prove --iterations 10
+
+      - name: Validate Benchmark Output (bench command)
+        run: cargo run --release -- bench
+
+  # ===========================================================================
+  # 3. Go Control-Plane & Network Matrix Execution
+  # ===========================================================================
+  go-workflow:
+    name: Go Control-Plane Matrix (${{ matrix.os }})
+    needs: [security-audit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check for Go modules
+        id: check_go
+        run: |
+          if [ -n "$(find . -name 'go.mod' -maxdepth 3)" ]; then
+            echo "go_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "go_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Go
+        if: steps.check_go.outputs.go_present == 'true'
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Test and Vet Go modules
+        if: steps.check_go.outputs.go_present == 'true'
+        run: |
+          for mod in $(find . -name "go.mod" -maxdepth 3 -exec dirname {} \;); do
+            echo "Processing Go module in $mod..."
+            (cd "$mod" && go vet ./... && go test -v -race ./... && go build ./...)
+          done
+
+  # ===========================================================================
+  # 4. TypeScript DSL & CLI Quality Matrix Execution
+  # ===========================================================================
+  ts-workflow:
+    name: TypeScript DSL & CLI Matrix (${{ matrix.os }})
+    needs: [security-audit]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check for TypeScript / Node packages
+        id: check_ts
+        run: |
+          if [ -n "$(find . -name 'package.json' -not -path '*/node_modules/*' -maxdepth 3)" ]; then
+            echo "ts_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "ts_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_ts.outputs.ts_present == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies, build and test TypeScript packages
+        if: steps.check_ts.outputs.ts_present == 'true'
+        run: |
+          for pkg in $(find . -name "package.json" -not -path '*/node_modules/*' -maxdepth 3 -exec dirname {} \;); do
+            echo "Processing Node package in $pkg..."
+            (cd "$pkg" && (npm ci || npm install) && (npm run build --if-present) && (npm test --if-present))
+          done
+
+  # ===========================================================================
+  # Browser Workbench: the real module under Node, and the real page in Chrome
+  # ===========================================================================
+  workbench:
+    name: Browser Workbench
+    needs: [security-audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      - name: Build the WebAssembly module
+        run: ./web/build.sh
+
+      - name: Test the module under Node
+        run: node web/test.mjs
+
+      - name: Test the page in headless Chrome
+        run: node web/browser-test.mjs

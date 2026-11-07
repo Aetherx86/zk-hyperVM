@@ -1,0 +1,5 @@
+/target
+**/*.rs.bk
+web/zkhypervm.wasm
+# cogit
+/.cogit/

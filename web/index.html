@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The browser itself enforces that nothing you open here can leave this page. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; worker-src 'self'; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>zk-HyperKVM Workbench</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>zk-HyperKVM Workbench</h1>
+  <p>Inspect binaries and generate proofs on this device. A content security policy blocks this page from sending anything over the network, and everything runs in WebAssembly.</p>
+  <nav>
+    <button data-tab="inspect" class="active">Inspect a binary</button>
+    <button data-tab="prove">Prove execution</button>
+    <button data-tab="circom">Check a Circom witness</button>
+  </nav>
+</header>
+<main>
+  <section id="inspect">
+    <label id="drop" class="drop">
+      <input id="file" type="file">
+      <span>Drop an ELF, PE or Mach-O file or EVM bytecode here, or click to choose one</span>
+    </label>
+    <div class="row">
+      <label>Treat as
+        <select id="arch">
+          <option value="0">detect automatically</option>
+          <option value="1">raw x86-64</option>
+          <option value="2">raw x86</option>
+          <option value="3">raw AArch64</option>
+          <option value="4">raw RISC-V 64</option>
+          <option value="5">EVM bytecode</option>
+        </select>
+      </label>
+      <label>Function
+        <select id="root"></select>
+      </label>
+    </div>
+    <p id="inspect-status" class="status"></p>
+    <div id="summary"></div>
+    <div id="graph" class="graph"></div>
+    <div id="lifted"></div>
+  </section>
+  <section id="prove" hidden>
+    <p>Runs a guest program under the verifiable hypervisor, folds every step into the IVC accumulators, and checks the result with the decider.</p>
+    <textarea id="program" rows="12" spellcheck="false"></textarea>
+    <div class="row">
+      <label>Iterations <input id="iterations" type="number" min="1" max="2000" value="5"></label>
+      <button id="run">Prove</button>
+    </div>
+    <p id="prove-status" class="status"></p>
+    <pre id="prove-output"></pre>
+  </section>
+  <section id="circom" hidden>
+    <p>Checks a witness against a circuit compiled by Circom, over BN254. The check runs twice, once directly and once through the conversion to CCS, the form zk-HyperKVM folds.</p>
+    <div class="row">
+      <label>Circuit (.r1cs) <input id="r1cs" type="file"></label>
+      <label>Witness (.wtns) <input id="wtns" type="file"></label>
+      <button id="check">Check</button>
+    </div>
+    <p id="circom-status" class="status"></p>
+    <pre id="circom-output"></pre>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

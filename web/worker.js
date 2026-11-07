@@ -1,0 +1,55 @@
+// Runs the WebAssembly module off the main thread, so a long proof never freezes the page.
+"use strict";
+
+let exports_ = null;
+
+async function instance() {
+  if (exports_) return exports_;
+  const response = await fetch("zkhypervm.wasm");
+  const { instance } = await WebAssembly.instantiate(await response.arrayBuffer(), {});
+  exports_ = instance.exports;
+  return exports_;
+}
+
+function copyIn(ex, bytes) {
+  const pointer = ex.zkhv_alloc(bytes.length);
+  new Uint8Array(ex.memory.buffer, pointer, bytes.length).set(bytes);
+  return pointer;
+}
+
+function readJson(ex, packed) {
+  const value = BigInt.asUintN(64, packed);
+  const pointer = Number(value >> 32n);
+  const length = Number(value & 0xffffffffn);
+  const text = new TextDecoder().decode(new Uint8Array(ex.memory.buffer, pointer, length));
+  ex.zkhv_free(pointer, length);
+  return JSON.parse(text);
+}
+
+self.onmessage = async ({ data }) => {
+  try {
+    const ex = await instance();
+    let result;
+    if (data.kind === "inspect") {
+      const p = copyIn(ex, data.bytes);
+      result = readJson(ex, ex.zkhv_inspect(p, data.bytes.length, data.architecture, 50000));
+      ex.zkhv_free(p, data.bytes.length);
+    } else if (data.kind === "prove") {
+      const source = new TextEncoder().encode(data.source);
+      const p = copyIn(ex, source);
+      result = readJson(ex, ex.zkhv_prove(p, source.length, data.iterations));
+      ex.zkhv_free(p, source.length);
+    } else if (data.kind === "circom") {
+      const a = copyIn(ex, data.r1cs);
+      const b = copyIn(ex, data.witness);
+      result = readJson(ex, ex.zkhv_check_circom(a, data.r1cs.length, b, data.witness.length));
+      ex.zkhv_free(a, data.r1cs.length);
+      ex.zkhv_free(b, data.witness.length);
+    }
+    self.postMessage({ id: data.id, result });
+  } catch (e) {
+    // A trap leaves the instance unusable, so the next request starts a fresh one.
+    exports_ = null;
+    self.postMessage({ id: data.id, result: { error: `the analysis stopped: ${e.message}` } });
+  }
+};

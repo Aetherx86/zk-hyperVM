@@ -1,0 +1,32 @@
+[workspace]
+members = [".", "crates/*"]
+
+[package]
+name = "zkhypervm"
+version = "0.2.0"
+edition = "2021"
+authors = ["Jeong Hoon Kim", "zkHyperVM Contributors"]
+description = "zk-HyperKVM: Verifiable Hardware-Assisted Virtualization via Lookup-Accelerated Incremental Folding over Extended Page Tables and VMCS Transitions"
+
+[dependencies]
+ark-ff = { version = "0.6", features = ["std"] }
+ark-ec = { version = "0.6", features = ["std"] }
+ark-bn254 = { version = "0.6" }
+ark-poly = { version = "0.6", features = ["std"] }
+ark-std = { version = "0.6" }
+ark-serialize = { version = "0.6", features = ["derive"] }
+sha3 = "0.10"
+rayon = "1.10"
+thiserror = "2.0"
+clap = { version = "4.5", features = ["derive"] }
+
+[[bin]]
+name = "zkhypervm"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+
+[lib]
+name = "zkhypervm"
+path = "src/lib.rs"

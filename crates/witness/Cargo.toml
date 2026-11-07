@@ -1,0 +1,15 @@
+[package]
+name = "zkhypervm-witness"
+version = "0.2.0"
+edition = "2021"
+authors = ["Jeong Hoon Kim"]
+description = "Client-side witness generation for zk-HyperKVM, with Circom R1CS and witness interoperability"
+license = "MIT"
+
+[dependencies]
+ark-ff = { version = "0.6", features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+zkhypervm = { path = "../.." }
+
+[dev-dependencies]
+serde_json = "1"

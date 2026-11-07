@@ -1,0 +1,89 @@
+name: Security Audit
+
+on:
+  push:
+    tags:
+      - "v*.0.0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-audit:
+    name: Rust Security Advisory Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+
+      - name: Install and Run cargo-audit
+        run: |
+          cargo install cargo-audit --locked || true
+          cargo audit
+
+  go-audit:
+    name: Go Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check for Go modules
+        id: check_go
+        run: |
+          if [ -n "$(find . -name 'go.mod' -maxdepth 3)" ]; then
+            echo "go_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "go_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Go
+        if: steps.check_go.outputs.go_present == 'true'
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.22'
+
+      - name: Run govulncheck
+        if: steps.check_go.outputs.go_present == 'true'
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          for mod in $(find . -name "go.mod" -maxdepth 3 -exec dirname {} \;); do
+            echo "Auditing Go module in $mod..."
+            (cd "$mod" && govulncheck ./...)
+          done
+
+  ts-audit:
+    name: TypeScript / Node Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check for TypeScript / Node packages
+        id: check_ts
+        run: |
+          if [ -n "$(find . -name 'package.json' -not -path '*/node_modules/*' -maxdepth 3)" ]; then
+            echo "ts_present=true" >> $GITHUB_OUTPUT
+          else
+            echo "ts_present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        if: steps.check_ts.outputs.ts_present == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        if: steps.check_ts.outputs.ts_present == 'true'
+        run: |
+          for pkg in $(find . -name "package.json" -not -path '*/node_modules/*' -maxdepth 3 -exec dirname {} \;); do
+            echo "Auditing Node package in $pkg..."
+            (cd "$pkg" && npm audit --audit-level=high)
+          done
